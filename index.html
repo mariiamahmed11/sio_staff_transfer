@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>نظام النقل الوظيفي — المؤسسة العامة للري</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <img src="assets/images/logo.png" alt="المؤسسة العامة للري">
+    <div class="header-text">
+      <h1>نظام النقل الوظيفي الإلكتروني</h1>
+      <p>يدير عدة طلبات نقل في آن واحد</p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="role-bar" id="roleBar"></div>
+  <button class="reset-btn" onclick="resetAll()">↺ إعادة ضبط النظام بالكامل (حذف جميع الطلبات)</button>
+
+  <div class="card">
+    <div class="board-head">
+      <div><h2>لوحة الطلبات</h2></div>
+      <button class="btn btn-primary" id="newReqBtn" onclick="createRequest()">+ طلب جديد</button>
+    </div>
+    <div id="requestsList"></div>
+  </div>
+
+  <div id="bannerHost"></div>
+  <div id="workspace"></div>
+</div>
+
+<div class="modal-overlay" id="policyModal">
+  <div class="modal-box">
+    <h3>سياسات وإجراءات النقل الوظيفي</h3>
+    <p class="modal-sub">الرجاء قراءة السياسة التالية قبل تعبئة بيانات الطلب.</p>
+    <div class="modal-body">
+      <h4>أولًا: النقل الداخلي</h4>
+      <p>يجوز نقل العامل من وظيفته إلى وظيفة أخرى داخل نفس مقر العمل، بعد التأكد من توفر شروط ومتطلبات الوظيفة الجديدة لديه. يتم النقل وفقًا للأنظمة المعتمدة وسياسات يقرّها الرئيس التنفيذي للمؤسسة.</p>
+
+      <h4>ثانيًا: النقل الخارجي (خارج منطقة العمل الأصلية)</h4>
+      <p>يجوز نقل العامل إلى وظيفة خارج مدينة مقر عمله الأصلي إذا اقتضت مصلحة العمل ذلك، ويُشترط موافقة العامل كتابيًا. يستحق العامل المنقول — إن كان طلب النقل بناءً على حاجة العمل — نفقات النقل له ولمن يعولهم (بحد أقصى ٣ أفراد)، ونفقات الإركاب حسب درجته الوظيفية، ونقل الأمتعة.</p>
+      <p><b>ملاحظة:</b> إن كان طلب النقل بناءً على طلب الموظف نفسه وكان خارج منطقة العمل، فلا يستحق أيًا من هذه المزايا.</p>
+
+      <h4>أحكام عامة</h4>
+      <ul>
+        <li>لا يجوز النقل إلى وظيفة أقل درجة إلا بموافقة العامل الخطية، مع عدم المساس بالأجر أو البدلات.</li>
+        <li>لا يجوز نقل العامل أثناء فترة التجربة.</li>
+        <li>يجب توفر شاغر وظيفي، وأن تتشابه مهام الوظيفتين في المسار الوظيفي.</li>
+        <li>يجب أن يمتلك الموظف الجدارات والخبرة المطلوبة لتلبية متطلبات الوظيفة الجديدة.</li>
+        <li>التأكد من توفر موافقة جميع الجهات المعنية بالانتقال قبل اعتماد الطلب.</li>
+      </ul>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="agreeToPolicy()">أوافق وأكمل التقديم</button>
+      <button class="btn btn-ghost" onclick="closeModal()">إغلاق دون الموافقة</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="assets/js/config/roles.js"></script>
+<script src="assets/js/config/form-schemas.js"></script>
+<script src="assets/js/core/state.js"></script>
+<script src="assets/js/core/fields.js"></script>
+<script src="assets/js/core/workflow.js"></script>
+<script src="assets/js/ui/policy-modal.js"></script>
+<script src="assets/js/ui/render.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
