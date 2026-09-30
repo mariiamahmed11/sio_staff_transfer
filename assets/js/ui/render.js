@@ -33,6 +33,14 @@ function turnLabel(r){
   return "—";
 }
 
+let boardSearch = "";
+function searchBoard(term){
+  boardSearch = term;
+  renderRequestsBoard();
+  const box = document.getElementById("boardSearch");
+  if (box){ box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+
 function renderRequestsBoard(){
   const host = document.getElementById("requestsList");
   const newBtn = document.getElementById("newReqBtn");
@@ -42,10 +50,15 @@ function renderRequestsBoard(){
     host.innerHTML = `<div class="empty-board">لا توجد طلبات بعد${selectedRole === ROLE.applicant ? " — ابدأ بزر «طلب جديد»." : " — اختر دور «مقدم الطلب» لإنشاء طلب."}</div>`;
     return;
   }
-  const sorted = [...requests].sort((a, b) => (canAct(b) ? 1 : 0) - (canAct(a) ? 1 : 0));
+  const term = boardSearch.trim();
+  const sorted = [...requests]
+    .filter(r => !term || getEmployees(r.data).some(e => matchesEmployee(e, term)))
+    .sort((a, b) => (canAct(b) ? 1 : 0) - (canAct(a) ? 1 : 0));
   const hidePlanner = selectedRole === ROLE.employee;
+  const search = `<input type="search" id="boardSearch" class="board-search" value="${esc(boardSearch)}"
+    placeholder="🔍 ابحث في الطلبات بالرقم الوظيفي أو اسم الموظف" oninput="searchBoard(this.value)" aria-label="بحث في الطلبات">`;
 
-  const rows = sorted.map(r => {
+  const rows = sorted.length ? sorted.map(r => {
     const { text, cls } = statusPhraseAndColor(r);
     const planner = hidePlanner ? "—" : (r.data.assignedPlanner ? esc(r.data.assignedPlanner) : `<span class="muted">لم يُسند بعد</span>`);
     return `<tr class="${cls} ${r.id === selectedRequestId ? "selected" : ""}" onclick="selectRequest(${r.id})">
@@ -55,9 +68,9 @@ function renderRequestsBoard(){
       <td>${esc(text)}</td>
       <td>${turnLabel(r)}</td>
     </tr>`;
-  }).join("");
+  }).join("") : `<tr><td colspan="5" class="muted">لا توجد طلبات لموظف يطابق «${esc(term)}».</td></tr>`;
 
-  host.innerHTML = `<div class="table-scroll"><table class="req-table">
+  host.innerHTML = search + `<div class="table-scroll"><table class="req-table">
     <thead><tr><th>رقم الطلب</th><th>الموظف</th><th>مسؤول التخطيط</th><th>الحالة</th><th>دورك الآن</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
@@ -78,10 +91,16 @@ function renderBanner(r){
 function renderEmployeePicker(f, reqId, d){
   if (isSelfRequest(d))
     return `<input type="text" id="f-${f.key}-${reqId}" value="${esc(d.employeeId)}" readonly class="auto-filled">`;
-  const opts = allowedEmployees(d).map(e =>
+  const term = pickerSearch[reqId] || "";
+  const list = allowedEmployees(d).filter(e => matchesEmployee(e, term) || e.employeeId === d.employeeId);
+  const opts = list.map(e =>
     `<option value="${esc(e.employeeId)}" ${d.employeeId === e.employeeId ? "selected" : ""}>${esc(e.employeeId)} — ${esc(e.name)}</option>`).join("");
-  return `<select id="f-${f.key}-${reqId}" onchange="pickEmployee(${reqId}, this.value)">
-    <option value="" ${!d.employeeId ? "selected" : ""}>اختر الرقم الوظيفي...</option>${opts}</select>`;
+  return `<div class="picker">
+    <input type="search" id="search-${reqId}" class="picker-search" value="${esc(term)}"
+      placeholder="🔍 ابحث بالرقم الوظيفي أو الاسم" oninput="searchEmployee(${reqId}, this.value)" aria-label="بحث عن موظف">
+    <select id="f-${f.key}-${reqId}" onchange="pickEmployee(${reqId}, this.value)">
+      <option value="" ${!d.employeeId ? "selected" : ""}>${list.length ? "اختر الرقم الوظيفي..." : "لا توجد نتائج مطابقة للبحث"}</option>${opts}</select>
+  </div>`;
 }
 
 function renderEmployeeTable(reqId, d){
@@ -181,6 +200,9 @@ function renderStepExtras(r, st){
     html += `<div class="notice amber"><b>سبب الإرجاع:</b> ${esc(r.returnReason)}</div>`;
   if (st.showRecommendation)
     html += `<div class="notice coral"><b>توصية مسؤول التخطيط (سبب الرفض):</b> ${esc(r.data.studyRecommendation || "—")}</div>`;
+  if (st.showRefusalNotice && employeeRefused(r.data))
+    html += `<div class="notice coral"><b>للعلم:</b> رفض الموظف المطلوب نقله النقل، وأرسل مسؤول التخطيط الطلب لإعلامكم بذلك.</div>`
+      + renderEmployeeResponses(r);
   if (st.showEmployeeResponses) html += renderEmployeeResponses(r);
   if (st.custom === "employee") html += renderEmployeeStep(r);
   return html;
@@ -210,7 +232,7 @@ function renderActionCard(r){
     <div class="status-badge" style="background:var(--${ph}-bg);color:var(--${ph}-tx);border:1px solid var(--${ph}-bd);">
       <span class="dot" style="background:var(--${ph}-bd);"></span>${esc(st.title)}
     </div>
-    <p class="desc">${esc(st.desc || "")}</p>
+    <p class="desc">${esc(typeof st.desc === "function" ? st.desc(r.data) : (st.desc || ""))}</p>
     ${errorMsg ? `<div class="err-box">${esc(errorMsg)}</div>` : ""}`;
 
   if (!canAct(r)){
@@ -225,6 +247,7 @@ function renderActionCard(r){
 
   if (st.decisions){
     html += `<div class="btn-row">` + st.decisions.map((dcs, i) => {
+      if (!isShown(dcs, r.data)) return "";
       const cls = dcs.kind === "reject" ? "btn-reject" : dcs.kind === "return" ? "btn-return" : "btn-primary";
       return `<button class="btn ${cls}" onclick="submitDecision(${reqId},${i})">${esc(dcs.label)}</button>`;
     }).join("") + `</div>`;

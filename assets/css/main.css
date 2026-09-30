@@ -173,6 +173,9 @@ fieldset legend { font-size:.83rem; font-weight:700; padding:0 8px; color:var(--
 /* حقول معبأة تلقائيًا */
 .field input.auto-filled { background:var(--teal-bg); color:var(--teal-tx); border-color:transparent; cursor:default; }
 .section-note { font-size:.76rem; color:var(--muted); margin:0 0 12px; }
+.picker { display:grid; gap:6px; }
+.board-search { margin:10px 0 8px; max-width:420px; display:block; }
+.field input.picker-search, .board-search { width:100%; font-family:inherit; font-size:.85rem; padding:8px 11px; border-radius:8px; border:1px dashed var(--blue-mid); background:var(--card); color:var(--ink); }
 
 /* جدول عدة موظفين */
 .emp-table { width:100%; min-width:920px; border-collapse:collapse; font-size:.78rem; margin-bottom:10px; }

@@ -53,6 +53,7 @@ function submitDecision(reqId, idx){
   const r = getReq(reqId); const schema = FORM_SCHEMAS[r.currentState];
   if (!canAct(r)) return;
   const decision = schema.decisions[idx];
+  if (!decision || !isShown(decision, r.data)) return;
   // بعض القرارات (مثل الرفض) تكتفي بحقول محددة بدل النموذج كاملًا
   const missing = decision.requiredKeys
     ? decision.requiredKeys.filter(k => !String(r.data[k] ?? "").trim())

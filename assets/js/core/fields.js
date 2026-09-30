@@ -116,6 +116,21 @@ function pickEmployee(reqId, id){
   render();
 }
 
+// ---------- البحث عن موظف بالرقم الوظيفي أو الاسم ----------
+const pickerSearch = {};
+const matchesEmployee = (e, term) => !term.trim() || e.employeeId.includes(term.trim()) || e.name.includes(term.trim());
+
+function searchEmployee(reqId, term){
+  const r = getReq(reqId); if (!r) return;
+  pickerSearch[reqId] = term;
+  // كتابة رقم وظيفي كامل تختار الموظف مباشرة
+  const exact = allowedEmployees(r.data).find(e => e.employeeId === term.trim());
+  if (exact) fillEmployee(r.data, exact.employeeId);
+  render();
+  const box = document.getElementById("search-" + reqId);
+  if (box){ box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+
 // ---------- جدول عدة موظفين ----------
 function autofillRow(d, row){
   const e = findEmployee(row.employeeId);

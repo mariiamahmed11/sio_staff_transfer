@@ -36,6 +36,7 @@ function approvalSchema(actorName, nextIfApprove, isFinal){
     phase:"purple", actor: actorName,
     title: "اعتماد " + actorName,
     desc: isFinal ? "المستوى الرابع والأخير في سلسلة الاعتماد — القرار هنا نهائي." : "أحد مستويات سلسلة الاعتماد الإداري بالتسلسل.",
+    showRefusalNotice: true,
     sections: [{ title:"القرار", fields:[
       {key:commentKey, label:"ملاحظات (إلزامي عند الرفض أو الإرجاع)", type:"textarea"}
     ]}],
@@ -65,6 +66,9 @@ function rejectionReviewSchema(actorName, nextIfApprove){
     ]
   };
 }
+
+// رفض الموظف المطلوب نقله: الإجراء الوحيد لمسؤول التخطيط هو إرسال الطلب لتسلسل الموافقات لإعلامهم
+const employeeRefused = d => Object.values(d.employeeResponses || {}).some(v => v.startsWith("لا"));
 
 const FORM_SCHEMAS = {
   draft: {
@@ -170,16 +174,19 @@ const FORM_SCHEMAS = {
 
   planner_decision: {
     phase:"gray", actor:ROLE.planner, title:"قرار مسؤول التخطيط",
-    desc:"وصل رد الموظف على طلب النقل. راجعه ثم أرسل الطلب لتسلسل الموافقات أو ارفضه. الرفض يحتاج إلى اعتماد نائب المدير والمدير ومدير الموارد البشرية ثم يُشعَر مقدم الطلب.",
+    desc: d => employeeRefused(d)
+      ? "رفض الموظف المطلوب نقله النقل. الإجراء المتاح لك هو إرسال الطلب لتسلسل الموافقات لإعلامهم برفضه."
+      : "وافق الموظف على النقل. راجع رده ثم أرسل الطلب لتسلسل الموافقات أو ارفضه. الرفض يحتاج إلى اعتماد نائب المدير والمدير ومدير الموارد البشرية ثم يُشعَر مقدم الطلب.",
     showEmployeeResponses: true,
     sections:[
-      { title:"التوصية", fields:[
+      { title:"التوصية", showIf: d => !employeeRefused(d), fields:[
         {key:"studyRecommendation", label:"التوصية (تظهر لمقدم الطلب في حال الرفض)", type:"textarea", required:true}
       ]}
     ],
     decisions:[
-      {label:"إرسال الطلب لتسلسل الموافقات", next:"appr1", kind:"primary"},
-      {label:"رفض الطلب وإشعار مقدم الطلب", next:"rej1", kind:"reject"}
+      {label:"إرسال الطلب لتسلسل الموافقات", next:"appr1", kind:"primary", showIf: d => !employeeRefused(d)},
+      {label:"رفض الطلب وإشعار مقدم الطلب", next:"rej1", kind:"reject", showIf: d => !employeeRefused(d)},
+      {label:"إرسال الطلب للموافقات لإعلامهم", next:"appr1", kind:"primary", showIf: employeeRefused}
     ]
   },
 
