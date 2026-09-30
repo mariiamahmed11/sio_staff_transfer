@@ -200,9 +200,6 @@ function renderStepExtras(r, st){
     html += `<div class="notice amber"><b>سبب الإرجاع:</b> ${esc(r.returnReason)}</div>`;
   if (st.showRecommendation)
     html += `<div class="notice coral"><b>توصية مسؤول التخطيط (سبب الرفض):</b> ${esc(r.data.studyRecommendation || "—")}</div>`;
-  if (st.showRefusalNotice && employeeRefused(r.data))
-    html += `<div class="notice coral"><b>للعلم:</b> رفض الموظف المطلوب نقله النقل، وأرسل مسؤول التخطيط الطلب لإعلامكم بذلك.</div>`
-      + renderEmployeeResponses(r);
   if (st.showEmployeeResponses) html += renderEmployeeResponses(r);
   if (st.custom === "employee") html += renderEmployeeStep(r);
   return html;
@@ -216,7 +213,7 @@ function renderActionCard(r){
   if (st.terminal === "ok"){
     return selectedRole === ROLE.employee
       ? `<p class="desc">تم اعتماد نقلك وصدر القرار الإداري.</p>`
-      : `<p class="desc">اكتمل الطلب #${reqId}. القرار الإداري الصادر:</p>${renderDecisionSheet(r)}`;
+      : `<p class="desc">اكتمل الطلب #${reqId}. القرار الإداري محفوظ في ملف المعاملة أدناه، ويمكن طباعته من هناك.</p>`;
   }
   if (st.terminal === "bad"){
     return `<p class="desc">انتهى مسار الطلب #${reqId} بالرفض، وسبب الرفض موضّح أعلاه.</p>`;
@@ -289,9 +286,14 @@ function renderWorkspace(){
   host.innerHTML = html;
 }
 
+// ملف المعاملة: النماذج فقط (أحدث نسخة من كل نموذج) والقرار الإداري بعد صدوره
 function renderCaseFile(r){
-  const steps = r.completedSteps;
-  const body = steps.length ? steps.map((s, i) => `<article class="case-step">
+  const latest = new Map();
+  r.completedSteps.forEach(s => { latest.delete(s.id); latest.set(s.id, s); });
+  const steps = [...latest.values()];
+  const hasDecision = r.currentState === "executed";
+  const count = steps.length + (hasDecision ? 1 : 0);
+  const forms = steps.map((s, i) => `<article class="case-step">
       <div class="case-head">
         <span class="case-num">${i + 1}</span>
         <div class="case-titles"><h4>${esc(s.title)}</h4><div class="who">${esc(s.actor || "")}</div></div>
@@ -299,16 +301,25 @@ function renderCaseFile(r){
       ${s.entries.length
         ? `<dl class="case-kv">${s.entries.map(e => `<div class="case-row"><dt>${esc(e.label)}</dt><dd>${esc(e.value)}</dd></div>`).join("")}</dl>`
         : `<p class="case-empty">لا توجد بيانات مُدخلة في هذه الخطوة.</p>`}
-    </article>`).join("")
-    : `<div class="empty-case">لم تُعتمد أي بيانات بعد. تظهر هنا بيانات كل خطوة بعد إكمالها.</div>`;
+    </article>`).join("");
+  const decision = hasDecision ? `<article class="case-step">
+      <div class="case-head">
+        <span class="case-num">${steps.length + 1}</span>
+        <div class="case-titles"><h4>القرار الإداري</h4><div class="who">صدر بتاريخ ${esc(formatDecisionDate(r.data.decisionDate))}</div></div>
+      </div>
+      <div class="case-decision">${renderDecisionSheet(r)}</div>
+    </article>` : "";
+  const body = count ? forms + decision
+    : `<div class="empty-case">لا توجد نماذج مكتملة بعد. تظهر هنا النماذج بعد تعبئتها، والقرار الإداري بعد صدوره.</div>`;
   return `<div class="card case-card"><h2>ملف المعاملة</h2>
-    <p class="sub">طلب رقم #${r.id} — ${steps.length} ${steps.length === 1 ? "خطوة مكتملة" : "خطوات مكتملة"}</p>
+    <p class="sub">طلب رقم #${r.id} — ${count} ${count === 1 ? "مستند" : "مستندات"} (النماذج والقرار الإداري، وبقية الإجراءات في سجل الإجراءات)</p>
     <div class="case-list">${body}</div></div>`;
 }
 
 function renderTimeline(r){
   const items = r.history.length ? r.history.map(h => `
-    <li><div class="tl-state">${esc(h.action)}</div><div class="tl-meta">بواسطة: ${esc(h.actor)} — التالي: ${esc(h.result)}</div></li>
+    <li><div class="tl-state">${esc(h.action)}</div><div class="tl-meta">بواسطة: ${esc(h.actor)} — التالي: ${esc(h.result)}</div>
+    ${h.note ? `<div class="tl-note">${esc(h.note)}</div>` : ""}</li>
   `).join("") : `<li class="tl-meta">لم يبدأ أي إجراء بعد.</li>`;
   return `<div class="card"><h2>سجل الإجراءات</h2><ul class="timeline">${items}</ul></div>`;
 }

@@ -36,7 +36,6 @@ function approvalSchema(actorName, nextIfApprove, isFinal){
     phase:"purple", actor: actorName,
     title: "اعتماد " + actorName,
     desc: isFinal ? "المستوى الرابع والأخير في سلسلة الاعتماد — القرار هنا نهائي." : "أحد مستويات سلسلة الاعتماد الإداري بالتسلسل.",
-    showRefusalNotice: true,
     sections: [{ title:"القرار", fields:[
       {key:commentKey, label:"ملاحظات (إلزامي عند الرفض أو الإرجاع)", type:"textarea"}
     ]}],
@@ -67,12 +66,27 @@ function rejectionReviewSchema(actorName, nextIfApprove){
   };
 }
 
-// رفض الموظف المطلوب نقله: الإجراء الوحيد لمسؤول التخطيط هو إرسال الطلب لتسلسل الموافقات لإعلامهم
+// رفض الموظف المطلوب نقله: الإجراء الوحيد لمسؤول التخطيط هو إرسال الطلب لتسلسل الموافقات لإعلامهم،
+// وخيارهم الوحيد "قبول الرفض"، وبعد قبول الجميع يُغلق الطلب بالرفض
 const employeeRefused = d => Object.values(d.employeeResponses || {}).some(v => v.startsWith("لا"));
+const REFUSAL_REASON = "رفض الموظف المطلوب نقله النقل، وقبلت جميع مستويات الاعتماد رفضه.";
+
+function acknowledgeSchema(actorName, next){
+  return {
+    phase:"coral", actor: actorName,
+    title: "العلم برفض الموظف — " + actorName,
+    desc: "رفض الموظف المطلوب نقله النقل، وأرسل مسؤول التخطيط الطلب لإعلامك. الخيار المتاح هو قبول الرفض، وبعد قبول جميع المستويات يُغلق الطلب بالرفض.",
+    showEmployeeResponses: true,
+    sections: [],
+    decisions: [
+      {label:"قبول الرفض", next, kind:"primary", reasonFn: () => REFUSAL_REASON}
+    ]
+  };
+}
 
 const FORM_SCHEMAS = {
   draft: {
-    phase:"teal", actor:ROLE.applicant, title:"نموذج طلب النقل الوظيفي",
+    phase:"teal", actor:ROLE.applicant, title:"نموذج طلب النقل الوظيفي", caseForm:true,
     sections:[
       { title:"صفة مقدّم الطلب", fields:[
         {key:"applicantCapacity", label:"صفة مقدّم الطلب", type:"select", options:Object.values(CAPACITY), required:true},
@@ -123,11 +137,12 @@ const FORM_SCHEMAS = {
         {key:"assignedPlanner", label:"مسؤول تخطيط الموارد البشرية المكلَّف", type:"select", options:PLANNERS, required:true}
       ]}
     ],
-    submitLabel:"إسناد الطلب", next:"study"
+    submitLabel:"إسناد الطلب", next:"study",
+    historyNote: d => "المسؤول المكلَّف: " + d.assignedPlanner
   },
 
   study: {
-    phase:"gray", actor:ROLE.planner, title:"نموذج دراسة حالة الطلب",
+    phase:"gray", actor:ROLE.planner, title:"نموذج دراسة حالة الطلب", caseForm:true,
     desc:"دراسة الاحتياج ومطابقة الوظيفة، وتحديد البدلات المفقودة وما إذا كان الطلب سيُرسل للموظف لأخذ موافقته.",
     sections:[
       { title:"بيانات الطلب", fields:[
@@ -160,12 +175,13 @@ const FORM_SCHEMAS = {
       {label:"إرسال الطلب للموافقة", kind:"primary",
         route: d => (!isSelfRequest(d) && d.sendToEmployee === "نعم") ? "employee" : "appr1"},
       // الرفض يكفيه كتابة التوصية (سبب الرفض)
-      {label:"رفض الطلب وإشعار مقدم الطلب", next:"rej1", kind:"reject", requiredKeys:["studyRecommendation"]}
+      {label:"رفض الطلب وإشعار مقدم الطلب", next:"rej1", kind:"reject", requiredKeys:["studyRecommendation"],
+        noteFn: d => "التوصية: " + d.studyRecommendation}
     ]
   },
 
   employee: {
-    phase:"amber", actor:ROLE.employee, title:"موافقة الموظف على النقل",
+    phase:"amber", actor:ROLE.employee, title:"نموذج موافقة الموظف على النقل", caseForm:true,
     desc:"اطّلع على ملخص النقل أدناه، ثم حدّد موافقتك.",
     custom:"employee",
     sections:[],
@@ -185,8 +201,9 @@ const FORM_SCHEMAS = {
     ],
     decisions:[
       {label:"إرسال الطلب لتسلسل الموافقات", next:"appr1", kind:"primary", showIf: d => !employeeRefused(d)},
-      {label:"رفض الطلب وإشعار مقدم الطلب", next:"rej1", kind:"reject", showIf: d => !employeeRefused(d)},
-      {label:"إرسال الطلب للموافقات لإعلامهم", next:"appr1", kind:"primary", showIf: employeeRefused}
+      {label:"رفض الطلب وإشعار مقدم الطلب", next:"rej1", kind:"reject", showIf: d => !employeeRefused(d),
+        noteFn: d => "التوصية: " + d.studyRecommendation},
+      {label:"إرسال الطلب للموافقات لإعلامهم", next:"ack1", kind:"primary", showIf: employeeRefused}
     ]
   },
 
@@ -198,6 +215,11 @@ const FORM_SCHEMAS = {
   rej1: rejectionReviewSchema(ROLE.deputy,  "rej2"),
   rej2: rejectionReviewSchema(ROLE.planMgr, "rej3"),
   rej3: rejectionReviewSchema(ROLE.hrMgr,   "rejected"),
+
+  ack1: acknowledgeSchema(ROLE.deputy,    "ack2"),
+  ack2: acknowledgeSchema(ROLE.planMgr,   "ack3"),
+  ack3: acknowledgeSchema(ROLE.hrMgr,     "ack4"),
+  ack4: acknowledgeSchema(ROLE.president, "rejected"),
 
   returned: {
     phase:"amber", actor:ROLE.planner, title:"طلب مُعاد للتعديل",

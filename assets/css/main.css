@@ -261,6 +261,8 @@ fieldset legend { font-size:.83rem; font-weight:700; padding:0 8px; color:var(--
 .case-row dt { font-size:.76rem; color:var(--case-dt); font-weight:500; }
 .case-row dd { margin:0; font-size:.86rem; font-weight:700; color:var(--ink); overflow-wrap:anywhere; }
 .case-empty { margin:0; padding:10px 14px; font-size:.8rem; color:var(--muted); }
+.case-decision { padding:16px 14px 4px; background:var(--bg); }
+.tl-note { font-size:.74rem; color:var(--ink); background:var(--bg); border-radius:6px; padding:4px 8px; margin-top:5px; line-height:1.6; }
 @media (max-width:560px) {
   .case-kv { grid-template-columns:1fr; }
   .case-row { grid-template-columns:1fr; gap:2px; }

@@ -13,10 +13,11 @@ function actorLabel(r, st){
   return st.actor === ROLE.planner && r.data.assignedPlanner ? `${st.actor} (${r.data.assignedPlanner})` : st.actor;
 }
 
-function moveTo(r, schema, next, actionLabel){
+// ملف المعاملة يحفظ النماذج فقط (caseForm)، وبقية الخطوات تظهر في سجل الإجراءات مع ملاحظتها
+function moveTo(r, schema, next, actionLabel, note){
   const actor = actorLabel(r, schema);
-  r.completedSteps.push(snapshotSchema(r.currentState, schema, r.data, actor));
-  r.history.push({ actor, action: actionLabel, result: FORM_SCHEMAS[next].title || next });
+  if (schema.caseForm) r.completedSteps.push(snapshotSchema(r.currentState, schema, r.data, actor));
+  r.history.push({ actor, action: actionLabel, result: FORM_SCHEMAS[next].title || next, note: note || "" });
   if (r.currentState === "draft") resetForResubmission(r);
   r.currentState = next;
   if (FORM_SCHEMAS[next].onEnter) FORM_SCHEMAS[next].onEnter(r);
@@ -45,7 +46,7 @@ function submitStep(reqId){
   if (missing.length){ errorMsg = "الرجاء إكمال ما يلي: " + missing.join("، "); render(); return; }
   errorMsg = "";
   const next = schema.route ? schema.route(r.data) : schema.next;
-  moveTo(r, schema, next, schema.submitLabel || "تنفيذ");
+  moveTo(r, schema, next, schema.submitLabel || "تنفيذ", schema.historyNote ? schema.historyNote(r.data) : "");
   render();
 }
 
@@ -70,7 +71,7 @@ function submitDecision(reqId, idx){
     r.lastReason = decision.reasonFn ? decision.reasonFn(r.data) : `${decision.reason}${comment ? ": " + comment : ""}`;
   }
   if (next === "returned") r.returnReason = `${decision.reason}: ${comment}`;
-  moveTo(r, schema, next, decision.label);
+  moveTo(r, schema, next, decision.label, decision.noteFn ? decision.noteFn(r.data) : (comment ? "الملاحظات: " + comment : ""));
   render();
 }
 
