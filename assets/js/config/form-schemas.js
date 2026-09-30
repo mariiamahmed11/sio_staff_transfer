@@ -1,70 +1,135 @@
 // ============================================================
 // 2) مخطط النماذج لكل خطوة — عدّلي هنا لإضافة/تغيير أي حقل
 // ============================================================
+// خصائص الحقل: key, label, type, options, required,
+//   showIf(d)   — يظهر الحقل فقط عند تحقق الشرط (ويُتجاهل في التحقق إن كان مخفيًا)
+//   readonly    — حقل للعرض فقط (يُعبّأ تلقائيًا من نظام الموظفين)
+// الأنواع: text, date, textarea, select, radio, checkbox, checkbox-single,
+//          employee-picker (قائمة الأرقام الوظيفية), employee-table (جدول عدة موظفين)
+
+const CAPACITY = {
+  self:    "طلب من الموظف نفسه",
+  fromMine:"طلب من مدير قسم بنقل موظف من قسمه إلى قسم آخر",
+  toMine:  "طلب من مدير قسم بنقل موظف من قسم آخر إلى قسمه"
+};
+const EMPLOYEE_COUNT = { single:"موظف واحد", multi:"أكثر من موظف" };
+
+const isSelfRequest = d => d.applicantCapacity === CAPACITY.self;
+const isMulti = d => !!d.applicantCapacity && !isSelfRequest(d) && d.employeeCount === EMPLOYEE_COUNT.multi;
+const hasCapacity = d => !!d.applicantCapacity;
+
+// أعمدة جدول الموظفين (نفس حقول النموذج الفردي + الجهة المنقول إليها لكل موظف)
+const TABLE_COLUMNS = [
+  { key:"employeeId", label:"الرقم الوظيفي", required:true },
+  { key:"name",       label:"الاسم", required:true },
+  { key:"department", label:"الإدارة / القسم الحالي" },
+  { key:"jobTitle",   label:"المسمى الوظيفي" },
+  { key:"grade",      label:"الدرجة" },
+  { key:"specialty",  label:"التخصص" },
+  { key:"targetDept", label:"الإدارة المنقول لها", required:true },
+  { key:"targetUnit", label:"القسم / الوحدة المنقول لها" }
+];
+
 function approvalSchema(actorName, nextIfApprove, isFinal){
-  const baseDecisions = isFinal ? [
-    {label:"الاعتماد النهائي", next:"executed_prep", kind:"primary"},
-    {label:"الرفض", next:"rejected", kind:"reject", reason:"رفض رئيس المؤسسة الطلب نهائيًا", requireComment:true},
-    {label:"الإرجاع للتعديل", next:"draft", kind:"return", reason:"أُعيد الطلب لمقدمه للتعديل بقرار رئيس المؤسسة", requireComment:true}
-  ] : [
-    {label:"اعتماد ورفع للمستوى التالي", next:nextIfApprove, kind:"primary"},
-    {label:"الرفض", next:"rejected", kind:"reject", reason:`رفض ${actorName} الطلب`, requireComment:true},
-    {label:"الإرجاع للتعديل", next:"draft", kind:"return", reason:`أُعيد الطلب للتعديل بقرار ${actorName}`, requireComment:true}
-  ];
+  const commentKey = "comment_" + actorName;
   return {
     phase:"purple", actor: actorName,
     title: "اعتماد " + actorName,
     desc: isFinal ? "المستوى الرابع والأخير في سلسلة الاعتماد — القرار هنا نهائي." : "أحد مستويات سلسلة الاعتماد الإداري بالتسلسل.",
     sections: [{ title:"القرار", fields:[
-      {key:"comment_"+actorName, label:"ملاحظات (إلزامي عند الرفض أو الإرجاع)", type:"textarea"}
+      {key:commentKey, label:"ملاحظات (إلزامي عند الرفض أو الإرجاع)", type:"textarea"}
     ]}],
-    decisions: baseDecisions.map(d => ({...d, commentKey:"comment_"+actorName}))
+    decisions: [
+      {label: isFinal ? "الاعتماد النهائي" : "اعتماد ورفع للمستوى التالي", next:nextIfApprove, kind:"primary"},
+      {label:"الرفض", next:"rejected", kind:"reject", reason:`رفض ${actorName} الطلب`, requireComment:true, commentKey},
+      {label:"الإرجاع للتعديل", next:"returned", kind:"return", reason:`أُعيد الطلب للتعديل بقرار ${actorName}`, requireComment:true, commentKey}
+    ]
+  };
+}
+
+// اعتماد رفض مسؤول التخطيط — يمر على النائب ثم المدير ثم مدير الموارد البشرية
+function rejectionReviewSchema(actorName, nextIfApprove){
+  const commentKey = "rejComment_" + actorName;
+  return {
+    phase:"coral", actor: actorName,
+    title: "اعتماد رفض الطلب — " + actorName,
+    desc: "رفض مسؤول تخطيط الموارد البشرية الطلب، ولا يُغلق الطلب إلا بعد اعتماد الرفض. عند الاعتماد النهائي تظهر التوصية لمقدم الطلب.",
+    showRecommendation: true,
+    sections: [{ title:"القرار", fields:[
+      {key:commentKey, label:"ملاحظات (إلزامي عند عدم اعتماد الرفض)", type:"textarea"}
+    ]}],
+    decisions: [
+      {label:"اعتماد الرفض", next:nextIfApprove, kind:"reject",
+        reasonFn: d => "التوصية: " + (d.studyRecommendation || "—")},
+      {label:"عدم اعتماد الرفض وإعادته لمسؤول التخطيط", next:"planner_decision", kind:"return", requireComment:true, commentKey}
+    ]
   };
 }
 
 const FORM_SCHEMAS = {
   draft: {
-    phase:"teal", actor:"مقدم الطلب", title:"نموذج طلب النقل الوظيفي",
+    phase:"teal", actor:ROLE.applicant, title:"نموذج طلب النقل الوظيفي",
     sections:[
       { title:"صفة مقدّم الطلب", fields:[
-        {key:"applicantCapacity", label:"صفة مقدّم الطلب", type:"select", options:["إدارة القسم","موظف داخل القسم"], required:true}
+        {key:"applicantCapacity", label:"صفة مقدّم الطلب", type:"select", options:Object.values(CAPACITY), required:true},
+        {key:"employeeCount", label:"عدد الموظفين المطلوب نقلهم", type:"radio", options:Object.values(EMPLOYEE_COUNT), required:true,
+          showIf: d => hasCapacity(d) && !isSelfRequest(d)}
       ]},
-      { title:"بيانات مقدّم الطلب", fields:[
-        {key:"name", label:"اسم الموظف", type:"text", required:true},
-        {key:"employeeId", label:"الرقم الوظيفي", type:"text", required:true},
-        {key:"department", label:"الإدارة / القسم / المكتب الحالي", type:"text", required:true},
-        {key:"jobTitle", label:"المسمى الوظيفي الحالي", type:"text", required:true},
-        {key:"grade", label:"الدرجة الوظيفية", type:"text", required:true},
-        {key:"specialty", label:"التخصص", type:"text"}
+      { title:"بيانات الموظف المطلوب نقله",
+        showIf: d => hasCapacity(d) && !isMulti(d),
+        note: d => isSelfRequest(d)
+          ? "تُعبّأ بياناتك الوظيفية تلقائيًا من نظام شؤون الموظفين."
+          : "اختر الرقم الوظيفي، وتُعبّأ بقية البيانات تلقائيًا من نظام شؤون الموظفين.",
+        fields:[
+          {key:"employeeId", label:"الرقم الوظيفي", type:"employee-picker", required:true},
+          {key:"name", label:"اسم الموظف", type:"text", readonly:true, required:true},
+          {key:"department", label:"الإدارة / القسم / المكتب الحالي", type:"text", readonly:true},
+          {key:"jobTitle", label:"المسمى الوظيفي الحالي", type:"text", readonly:true},
+          {key:"grade", label:"الدرجة الوظيفية", type:"text", readonly:true},
+          {key:"specialty", label:"التخصص", type:"text", readonly:true}
       ]},
-      { title:"تفاصيل الطلب", fields:[
+      { title:"بيانات الموظفين المطلوب نقلهم",
+        showIf: isMulti,
+        note: () => "كل موظف في صف. يمكنك نسخ الصفوف من Excel ولصقها مباشرة في الجدول، ويكفي إدخال الرقم الوظيفي لتعبئة بقية البيانات تلقائيًا.",
+        fields:[
+          {key:"employees", label:"جدول الموظفين", type:"employee-table", required:true}
+      ]},
+      { title:"تفاصيل الطلب", showIf: hasCapacity, fields:[
         {key:"transferType", label:"نوع النقل", type:"radio", options:["داخل الجهة","خارج الجهة"], required:true},
+        {key:"region", label:"المنطقة", type:"radio", options:["داخل المنطقة","خارج المنطقة"], required:true},
         {key:"justifications", label:"مبررات طلب النقل", type:"checkbox", options:[
           "سد احتياج وظيفي","إعادة توزيع للموظفين بالإدارة","قصور بالوحدة التنظيمية",
           "تحديث بالمهام والمسؤوليات بالإدارة","تنمية وتطوير قدرات الموظف","أخرى"], required:true},
         {key:"supportingJustification", label:"مبررات داعمة لطلب النقل", type:"textarea"}
       ]},
-      { title:"الجهة المراد النقل إليها", fields:[
-        {key:"targetDept", label:"الإدارة", type:"text", required:true},
-        {key:"targetUnit", label:"القسم / الوحدة", type:"text"},
+      { title:"الجهة المراد النقل إليها", showIf: hasCapacity, fields:[
+        {key:"targetDept", label:"الإدارة", type:"text", required:true, showIf: d => !isMulti(d)},
+        {key:"targetUnit", label:"القسم / الوحدة", type:"text", showIf: d => !isMulti(d)},
         {key:"expectedTasks", label:"المهام المتوقّع أن يقوم بها الموظف بالجهة الجديدة", type:"textarea", required:true}
       ]},
-      { title:"موافقة الجهات المعنية", fields:[
+      { title:"موافقة الجهات المعنية", showIf: hasCapacity, fields:[
         {key:"currentDeptApproval", label:"موافقة الجهة الحالية للموظف", type:"radio", options:["موافقة متوفرة","لا توجد بعد"], required:true},
         {key:"targetDeptApproval", label:"موافقة الجهة المراد النقل إليها", type:"radio", options:["موافقة متوفرة","لا توجد بعد"], required:true},
         {key:"targetDate", label:"التاريخ المستهدف للانتقال", type:"date"}
       ]}
     ],
-    submitLabel:"تقديم الطلب", next:"received"
+    submitLabel:"تقديم الطلب", next:"head_review"
   },
 
-  received: { phase:"gray", actor:"مسؤول تخطيط الموارد البشرية", title:"استقبال الطلب",
-    desc:"وصل طلب النقل إلى تخطيط الموارد البشرية، وينتظر بدء الدراسة.",
-    sections:[], submitLabel:"بدء دراسة الطلب", next:"study" },
+  head_review: {
+    phase:"gray", actor:ROLE.head, title:"استقبال الطلب وإسناده",
+    desc:"يستقبل رئيس قسم تخطيط الموارد البشرية طلب النقل ويسنده إلى أحد مسؤولي التخطيط. يستطيع المسؤول المكلَّف وحده إكمال إجراءات الطلب، ويطّلع عليه بقية المسؤولين دون اتخاذ أي إجراء.",
+    sections:[
+      { title:"إسناد الطلب", fields:[
+        {key:"assignedPlanner", label:"مسؤول تخطيط الموارد البشرية المكلَّف", type:"select", options:PLANNERS, required:true}
+      ]}
+    ],
+    submitLabel:"إسناد الطلب", next:"study"
+  },
 
   study: {
-    phase:"gray", actor:"مسؤول تخطيط الموارد البشرية", title:"نموذج دراسة حالة الطلب",
-    desc:"دراسة الاحتياج ومطابقة الوظيفة، وتحديد الحاجة لموافقة مالية.",
+    phase:"gray", actor:ROLE.planner, title:"نموذج دراسة حالة الطلب",
+    desc:"دراسة الاحتياج ومطابقة الوظيفة، وتحديد البدلات المفقودة وما إذا كان الطلب سيُرسل للموظف لأخذ موافقته.",
     sections:[
       { title:"بيانات الطلب", fields:[
         {key:"availableUnit", label:"الوحدة التنظيمية المتاح الانتقال إليها", type:"text", required:true},
@@ -72,7 +137,8 @@ const FORM_SCHEMAS = {
       ]},
       { title:"الأثر المالي والتنظيمي", fields:[
         {key:"budgetConflict", label:"هل يخالف التحوير تعليمات الميزانية؟", type:"radio", options:["نعم","لا"], required:true},
-        {key:"hasFinancialImpact", label:"هل يوجد أثر مالي على الانتقال؟", type:"radio", options:["نعم","لا"], required:true}
+        {key:"hasFinancialImpact", label:"هل يوجد أثر مالي على الانتقال؟", type:"radio", options:["نعم","لا"], required:true},
+        {key:"allowancesLost", label:"البدلات المفقودة نتيجة النقل (إن وجدت)", type:"textarea"}
       ]},
       { title:"الأنظمة والموافقات", fields:[
         {key:"matchesWorkforcePlan", label:"هل يتوافق مع خطة القوى العاملة المعتمدة؟", type:"radio", options:["نعم","لا"], required:true},
@@ -83,78 +149,70 @@ const FORM_SCHEMAS = {
         {key:"meetsQualifications", label:"هل يمتلك الموظف المؤهلات والجدارات المطلوبة؟", type:"radio", options:["نعم","لا"], required:true},
         {key:"significantTaskDifference", label:"هل تختلف المهام اختلافًا جوهريًا عن العمل الحالي؟", type:"radio", options:["نعم","لا"], required:true}
       ]},
+      { title:"موافقة الموظف", showIf: d => !isSelfRequest(d), fields:[
+        {key:"sendToEmployee", label:"إرسال الطلب للموظف للموافقة", type:"radio", options:["نعم","لا"], required:true}
+      ]},
       { title:"التوصية", fields:[
-        {key:"studyRecommendation", label:"توصية مسؤول تخطيط الموارد البشرية", type:"textarea", required:true}
+        {key:"studyRecommendation", label:"توصية مسؤول تخطيط الموارد البشرية (تظهر لمقدم الطلب في حال الرفض)", type:"textarea", required:true}
       ]}
     ],
     submitLabel:"إنهاء الدراسة والمتابعة",
-    route: (d) => d.hasFinancialImpact === "نعم" ? "financial" : "employee"
-  },
-
-  financial: {
-    phase:"amber", actor:"مسؤول الموافقات المالية", title:"نموذج دراسة الأثر المالي",
-    desc:"دراسة الأثر المالي المترتب على النقل، وإرسال القرار.",
-    sections:[
-      { title:"البيانات المالية", fields:[
-        {key:"currentSalary", label:"الراتب الأساسي الحالي", type:"text"},
-        {key:"targetSalary", label:"الراتب / الدرجة المستهدفة", type:"text"},
-        {key:"allowancesAffected", label:"البدلات المتأثرة بالنقل (إن وجدت)", type:"textarea"},
-        {key:"budgetAvailable", label:"هل يتوفر الاعتماد المالي اللازم؟", type:"radio", options:["نعم","لا"], required:true},
-        {key:"financialNotes", label:"ملاحظات مسؤول الموافقات المالية", type:"textarea"}
-      ]}
-    ],
-    decisions:[
-      {label:"الموافقة على الطلب المالي", next:"employee", kind:"primary"},
-      {label:"رفض الطلب المالي", next:"rejected", kind:"reject", reason:"رفض مسؤول الموافقات المالية الطلب لعدم توفر الاعتماد المالي"}
-    ]
+    route: d => (!isSelfRequest(d) && d.sendToEmployee === "نعم") ? "employee" : "planner_decision"
   },
 
   employee: {
-    phase:"gray", actor:"الموظف المطلوب نقله", title:"البتّ في نموذج طلب موافقة النقل",
-    desc:"مراجعة تفاصيل النقل المعروضة أدناه في ملف المعاملة، ثم اتخاذ القرار.",
+    phase:"amber", actor:ROLE.employee, title:"موافقة الموظف على النقل",
+    desc:"اطّلع على ملخص النقل أدناه، ثم حدّد موافقتك.",
+    custom:"employee",
+    sections:[],
+    submitLabel:"إرسال الرد", next:"planner_decision"
+  },
+
+  planner_decision: {
+    phase:"gray", actor:ROLE.planner, title:"قرار مسؤول التخطيط",
+    desc:"راجع نتيجة الدراسة ورد الموظف (إن وُجد)، ثم ارفع الطلب لسلسلة الاعتماد أو ارفضه. الرفض يحتاج إلى اعتماد نائب المدير والمدير ومدير الموارد البشرية.",
+    showEmployeeResponses: true,
     sections:[
-      { title:"إقرار الموظف", fields:[
-        {key:"employeeSignatureName", label:"اسم الموظف (إقرارًا بالاطّلاع)", type:"text", required:true},
-        {key:"employeeDecisionDate", label:"التاريخ", type:"date"}
+      { title:"التوصية", fields:[
+        {key:"studyRecommendation", label:"التوصية (تظهر لمقدم الطلب في حال الرفض)", type:"textarea", required:true}
       ]}
     ],
     decisions:[
-      {label:"أوافق على النقل", next:"admin_draft", kind:"primary"},
-      {label:"لا أوافق على النقل", next:"rejected", kind:"reject", reason:"رفض الموظف المطلوب نقله الموافقة على النقل"}
+      {label:"اعتماد الطلب ورفعه لسلسلة الاعتماد", next:"appr1", kind:"primary"},
+      {label:"رفض الطلب", next:"rej1", kind:"reject"}
     ]
   },
 
-  admin_draft: {
-    phase:"purple", actor:"مسؤول تخطيط الموارد البشرية", title:"إعداد القرار الإداري (مسودة)",
-    desc:"إعداد مسودة القرار، وتحديد صاحب الصلاحية آليًا حسب نوع النقل والدرجة.",
+  appr1: approvalSchema(ROLE.deputy,    "appr2", false),
+  appr2: approvalSchema(ROLE.planMgr,   "appr3", false),
+  appr3: approvalSchema(ROLE.hrMgr,     "appr4", false),
+  appr4: approvalSchema(ROLE.president, "decision_prep", true),
+
+  rej1: rejectionReviewSchema(ROLE.deputy,  "rej2"),
+  rej2: rejectionReviewSchema(ROLE.planMgr, "rej3"),
+  rej3: rejectionReviewSchema(ROLE.hrMgr,   "rejected"),
+
+  returned: {
+    phase:"amber", actor:ROLE.planner, title:"طلب مُعاد للتعديل",
+    desc:"أُعيد الطلب من سلسلة الاعتماد. راجع سبب الإرجاع ثم أرسل الطلب لمقدمه ليعدّله ويعيد تقديمه.",
+    showReturnReason: true,
+    sections:[],
+    submitLabel:"إرسال الطلب لمقدم الطلب للتعديل", next:"draft"
+  },
+
+  decision_prep: {
+    phase:"green", actor:ROLE.planner, title:"إصدار القرار الإداري وإغلاق الطلب",
+    desc:"اعتُمد الطلب من جميع الأطراف. القرار الإداري أدناه مُعبّأ تلقائيًا من بيانات الطلب؛ راجعه واطبعه ثم أنهِ الإجراء.",
+    showDecisionSheet: true,
     sections:[
       { title:"بيانات القرار", fields:[
-        {key:"decisionType", label:"نوع القرار", type:"select", options:[
-          "نقل داخل المنطقة لمصلحة العمل","نقل خارج المنطقة لمصلحة العمل","نقل خارج المنطقة بناءً على طلب الموظف"], required:true},
-        {key:"decisionDate", label:"تاريخ القرار", type:"date", required:true},
-        {key:"decisionFile", label:"رفع ملف القرار الإداري (اختياري)", type:"file"}
+        {key:"decisionDate", label:"تاريخ القرار", type:"date", required:true}
       ]}
     ],
-    submitLabel:"رفع القرار لصاحب الصلاحية", next:"appr1"
+    submitLabel:"إنهاء الإجراء وإغلاق الطلب", next:"executed",
+    onEnter: r => { if (!r.data.decisionDate) r.data.decisionDate = new Date().toISOString().slice(0,10); }
   },
 
-  appr1: approvalSchema("نائب مدير تخطيط الموارد البشرية","appr2", false),
-  appr2: approvalSchema("مدير تخطيط الموارد البشرية","appr3", false),
-  appr3: approvalSchema("مدير الموارد البشرية","appr4", false),
-  appr4: approvalSchema("رئيس المؤسسة","executed_prep", true),
-
-  executed_prep: {
-    phase:"green", actor:"مسؤول تخطيط الموارد البشرية", title:"تنفيذ القرار وتحديث الأنظمة",
-    desc:"تنفيذ التغيير في الأنظمة وإشعار جميع الأطراف.",
-    sections:[
-      { title:"بيانات التنفيذ", fields:[
-        {key:"executionDate", label:"تاريخ التنفيذ الفعلي", type:"date", required:true},
-        {key:"executionNotes", label:"ملاحظات التنفيذ", type:"textarea"}
-      ]}
-    ],
-    submitLabel:"تنفيذ الإجراء وإغلاق الطلب", next:"executed"
-  },
-
-  executed: { terminal:"ok" },
-  rejected: { terminal:"bad" }
+  executed: { terminal:"ok",  title:"اكتمل الطلب" },
+  rejected: { terminal:"bad", title:"أُغلق الطلب بالرفض" }
 };

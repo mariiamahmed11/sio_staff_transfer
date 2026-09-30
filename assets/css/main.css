@@ -15,9 +15,9 @@
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --ink:#e8edf2; --muted:#93a1ac; --bg:#0f1720; --card:#182634; --line:#2a3a48; }
+  :root:not([data-theme="light"]) { --ink:#e8edf2; --muted:#93a1ac; --bg:#0f1720; --card:#182634; --line:#2a3a48; color-scheme:dark; }
 }
-:root[data-theme="dark"] { --ink:#e8edf2; --muted:#93a1ac; --bg:#0f1720; --card:#182634; --line:#2a3a48; }
+:root[data-theme="dark"] { --ink:#e8edf2; --muted:#93a1ac; --bg:#0f1720; --card:#182634; --line:#2a3a48; color-scheme:dark; }
 * { box-sizing:border-box; }
 html { scroll-padding-top:env(safe-area-inset-top,0px); height:100%; }
 body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family:'Tajawal','Segoe UI',sans-serif; }
@@ -147,3 +147,77 @@ fieldset legend { font-size:.83rem; font-weight:700; padding:0 8px; color:var(--
 .modal-body ul { margin:6px 0; padding-inline-start:20px; }
 .modal-body li { margin-bottom:5px; }
 .modal-actions { display:flex; gap:10px; margin-top:16px; }
+
+[hidden] { display:none !important; }
+.muted { color:var(--muted); }
+
+/* شريط اختيار مسؤول التخطيط */
+.planner-bar { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:-4px 0 14px; padding:10px 12px; background:var(--card); border:1px dashed var(--line); border-radius:10px; }
+.planner-bar .sub-label { font-size:.74rem; color:var(--muted); margin-inline-end:4px; }
+.planner-chip { border:1px solid var(--line); background:var(--bg); color:var(--ink); padding:5px 11px; border-radius:14px; font-family:inherit; font-size:.74rem; cursor:pointer; }
+.planner-chip.active { background:var(--blue-mid); border-color:var(--blue-mid); color:#fff; }
+
+/* الجداول */
+.table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.req-table { min-width:560px; }
+.turn-chip { font-weight:700; white-space:nowrap; }
+.view-chip { font-size:.72rem; background:var(--gray2-bg); color:var(--gray2-tx); border:1px solid var(--gray2-bd); padding:3px 9px; border-radius:10px; white-space:nowrap; }
+
+/* حقول معبأة تلقائيًا */
+.field input.auto-filled { background:var(--teal-bg); color:var(--teal-tx); border-color:transparent; cursor:default; }
+.section-note { font-size:.76rem; color:var(--muted); margin:0 0 12px; }
+
+/* جدول عدة موظفين */
+.emp-table { width:100%; min-width:920px; border-collapse:collapse; font-size:.78rem; margin-bottom:10px; }
+.emp-table th { font-weight:700; color:var(--muted); font-size:.72rem; padding:6px 4px; border-bottom:2px solid var(--line); text-align:start; white-space:nowrap; }
+.emp-table td { padding:3px; border-bottom:1px solid var(--line); }
+.emp-table td.row-num { color:var(--muted); text-align:center; width:28px; font-variant-numeric:tabular-nums; }
+.emp-table input { width:100%; font-family:inherit; font-size:.78rem; padding:7px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink); }
+.emp-table input:focus { outline:2px solid var(--blue-light); outline-offset:-1px; }
+.row-del { border:none; background:none; color:var(--muted); cursor:pointer; font-size:.9rem; padding:4px 8px; border-radius:6px; }
+.row-del:hover { color:var(--coral-tx); background:var(--coral-bg); }
+.btn-sm { padding:7px 14px; font-size:.78rem; }
+
+/* تنبيهات داخل الخطوات */
+.notice { font-size:.82rem; line-height:1.7; padding:10px 14px; border-radius:9px; margin-bottom:14px; background:var(--bg); border:1px solid var(--line); }
+.notice.amber { background:var(--amber-bg); color:var(--amber-tx); border-color:var(--amber-bd); }
+.notice.coral { background:var(--coral-bg); color:var(--coral-tx); border-color:var(--coral-bd); }
+.emp-summary .kv { font-size:.84rem; margin-bottom:6px; }
+.decision-row { margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+.resp-yes { color:var(--green-bd); font-weight:700; }
+.resp-no { color:var(--coral-bd); font-weight:700; }
+
+/* ورقة القرار الإداري — ورق أبيض بحبر أسود في كل الأوضاع */
+.decision-sheet { display:grid; gap:16px; margin:4px 0 14px; }
+.ds-page { position:relative; overflow:hidden; background:#fff; color:#111; border:1px solid #d6dbe0; border-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.08); padding:28px 32px; font-family:'Amiri','Traditional Arabic','Tajawal',serif; font-size:1.05rem; line-height:2; }
+.ds-watermark { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:3.2rem; font-weight:700; color:rgba(0,71,161,.07); transform:rotate(-24deg); pointer-events:none; white-space:nowrap; }
+.ds-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:6px; }
+.ds-head img { height:48px; }
+.ds-meta { font-family:'Tajawal',sans-serif; font-size:.74rem; color:#444; line-height:1.7; text-align:end; }
+.ds-title { text-align:center; font-size:1.35rem; font-weight:700; margin:4px 0 10px; color:#111; }
+.ds-line { margin:0; font-weight:700; }
+.ds-decides { text-align:center; font-weight:700; margin:8px 0; }
+.ds-sign { text-align:center; margin:34px 0 18px; font-weight:700; display:grid; gap:14px; justify-items:center; }
+.ds-copies { font-family:'Tajawal',sans-serif; font-size:.66rem; color:#333; line-height:1.7; }
+.ds-table-wrap { overflow-x:auto; }
+.ds-table { width:100%; min-width:520px; border-collapse:collapse; font-size:.86rem; line-height:1.5; }
+.ds-table th, .ds-table td { border:1.5px solid #333; padding:5px 8px; text-align:center; height:26px; }
+.ds-table th { font-weight:700; background:#f3f5f7; }
+.print-note { font-size:.76rem; color:var(--muted); margin:0 0 12px; }
+
+@media (max-width:560px) {
+  .ds-page { padding:20px 16px; font-size:.95rem; }
+  .ds-watermark { font-size:2.2rem; }
+}
+
+/* الطباعة: تُطبع ورقة القرار فقط */
+#printHost { display:none; }
+@media print {
+  body.print-decision > *:not(#printHost) { display:none !important; }
+  body.print-decision #printHost { display:block; }
+  body.print-decision { background:#fff; }
+  #printHost .decision-sheet { display:block; margin:0; }
+  #printHost .ds-page { border:none; box-shadow:none; border-radius:0; padding:0; page-break-after:always; break-after:page; }
+  #printHost .ds-page:last-child { page-break-after:auto; break-after:auto; }
+  @page { size:A4; margin:20mm; }
+}

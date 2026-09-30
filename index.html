@@ -6,7 +6,7 @@
 <title>نظام النقل الوظيفي — المؤسسة العامة للري</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body>
@@ -23,6 +23,7 @@
 
 <div class="wrap">
   <div class="role-bar" id="roleBar"></div>
+  <div class="planner-bar" id="plannerBar" hidden></div>
   <button class="reset-btn" onclick="resetAll()">↺ إعادة ضبط النظام بالكامل (حذف جميع الطلبات)</button>
 
   <div class="card">
@@ -66,12 +67,16 @@
 </div>
 
 
+<div id="printHost"></div>
+
 <script src="assets/js/config/roles.js"></script>
+<script src="assets/js/config/employees.js"></script>
 <script src="assets/js/config/form-schemas.js"></script>
 <script src="assets/js/core/state.js"></script>
 <script src="assets/js/core/fields.js"></script>
 <script src="assets/js/core/workflow.js"></script>
 <script src="assets/js/ui/policy-modal.js"></script>
+<script src="assets/js/ui/decision-sheet.js"></script>
 <script src="assets/js/ui/render.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
