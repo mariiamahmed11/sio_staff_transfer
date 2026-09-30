@@ -219,13 +219,6 @@ function renderActionCard(r){
     return html + `<div class="waiting">بانتظار إجراء من: <b>${esc(actorLabel(r, st))}</b> — لا يوجد إجراء متاح لدورك الحالي (${esc(selectedRole)})</div>`;
   }
 
-  if (r.currentState === "draft" && !r.data.policyAgreed){
-    return html + `<div class="policy-gate">
-      <p>قبل تعبئة بيانات الطلب، يجب الاطّلاع على سياسات وإجراءات النقل الوظيفي والموافقة عليها إلكترونيًا.</p>
-      <button class="btn btn-primary" onclick="openPolicyModal(${reqId})">📄 عرض سياسات النقل والموافقة عليها</button>
-    </div>`;
-  }
-
   html += renderStepExtras(r, st);
   html += renderSections(st.sections, reqId, r.data);
   if (st.showDecisionSheet) html += renderDecisionSheet(r);
@@ -254,24 +247,47 @@ function renderWorkspace(){
   // ومقدم الطلب يرى عند الرفض سبب الرفض (التوصية) فقط.
   const hideCase = selectedRole === ROLE.employee || (selectedRole === ROLE.applicant && st.terminal === "bad");
 
-  let html = `<div class="card"><h2>الإجراء الحالي</h2><p class="sub">طلب رقم #${r.id}</p>${renderActionCard(r)}</div>`;
+  const active = canAct(r);
+  let html = "";
 
-  if (!hideCase){
-    const caseHTML = r.completedSteps.length ? r.completedSteps.map(s => `
-      <div class="case-step"><h4>${esc(s.title)}</h4><div class="who">${esc(s.actor || "")}</div>
-      ${s.entries.length ? s.entries.map(e => `<div class="kv"><b>${esc(e.label)}:</b> ${esc(e.value)}</div>`).join("") : '<div class="kv">لا توجد حقول لهذه الخطوة.</div>'}</div>
-    `).join("") : `<div class="empty-case">لم تُعتمد أي بيانات بعد.</div>`;
-
-    const tlHTML = r.history.length ? r.history.map(h => `
-      <li><div class="tl-state">${esc(h.action)}</div><div class="tl-meta">بواسطة: ${esc(h.actor)} — التالي: ${esc(h.result)}</div></li>
-    `).join("") : `<li class="tl-meta">لم يبدأ أي إجراء بعد.</li>`;
-
-    html += `<div class="grid">
-      <div class="card"><h2>ملف المعاملة</h2>${caseHTML}</div>
-      <div class="card"><h2>سجل الإجراءات</h2><ul class="timeline">${tlHTML}</ul></div>
-    </div>`;
+  if (selectedRole === ROLE.applicant){
+    // مقدم الطلب لا يرى "الإجراء الحالي"؛ يظهر له نموذج الطلب فقط حين يكون عليه تعبئته أو تعديله
+    if (active) html += `<div class="card action-card is-active">
+      <div class="action-head"><h2>طلب النقل #${r.id}</h2></div>${renderActionCard(r)}</div>`;
+  } else {
+    // ملوّن إذا كان على الدور الحالي إجراء، ورصاصي بالكامل إذا لم يكن
+    html += `<div class="card action-card ${active ? "is-active" : "is-idle"}">
+      <div class="action-head"><h2>الإجراء الحالي</h2>
+        <span class="action-state">${active ? "🔔 دورك الآن" : "لا يوجد إجراء مطلوب منك"}</span></div>
+      <p class="sub">طلب رقم #${r.id}</p>${renderActionCard(r)}</div>`;
   }
+
+  if (!hideCase) html += renderCaseFile(r) + renderTimeline(r);
   host.innerHTML = html;
+}
+
+function renderCaseFile(r){
+  const steps = r.completedSteps;
+  const body = steps.length ? steps.map((s, i) => `<article class="case-step">
+      <div class="case-head">
+        <span class="case-num">${i + 1}</span>
+        <div class="case-titles"><h4>${esc(s.title)}</h4><div class="who">${esc(s.actor || "")}</div></div>
+      </div>
+      ${s.entries.length
+        ? `<dl class="case-kv">${s.entries.map(e => `<div class="case-row"><dt>${esc(e.label)}</dt><dd>${esc(e.value)}</dd></div>`).join("")}</dl>`
+        : `<p class="case-empty">لا توجد بيانات مُدخلة في هذه الخطوة.</p>`}
+    </article>`).join("")
+    : `<div class="empty-case">لم تُعتمد أي بيانات بعد. تظهر هنا بيانات كل خطوة بعد إكمالها.</div>`;
+  return `<div class="card case-card"><h2>ملف المعاملة</h2>
+    <p class="sub">طلب رقم #${r.id} — ${steps.length} ${steps.length === 1 ? "خطوة مكتملة" : "خطوات مكتملة"}</p>
+    <div class="case-list">${body}</div></div>`;
+}
+
+function renderTimeline(r){
+  const items = r.history.length ? r.history.map(h => `
+    <li><div class="tl-state">${esc(h.action)}</div><div class="tl-meta">بواسطة: ${esc(h.actor)} — التالي: ${esc(h.result)}</div></li>
+  `).join("") : `<li class="tl-meta">لم يبدأ أي إجراء بعد.</li>`;
+  return `<div class="card"><h2>سجل الإجراءات</h2><ul class="timeline">${items}</ul></div>`;
 }
 
 function render(){

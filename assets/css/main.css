@@ -11,13 +11,20 @@
   --coral-bg:#fbdcda; --coral-bd:#b85450; --coral-tx:#7a2b28;
   --green-bg:#d9f0e2; --green-bd:#2f6f4f; --green-tx:#1a4530;
 
+  /* بطاقة الإجراء: نشطة (دورك) / خاملة (رصاصي) */
+  --active-tint:#eaf4fd; --idle-bg:#e6e9ec; --idle-line:#d0d5da;
+  /* ملف المعاملة */
+  --case-head:#f3f7fb; --case-dt:#5b6675;
+
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --ink:#e8edf2; --muted:#93a1ac; --bg:#0f1720; --card:#182634; --line:#2a3a48; color-scheme:dark; }
+  :root:not([data-theme="light"]) { --ink:#e8edf2; --muted:#93a1ac; --bg:#0f1720; --card:#182634; --line:#2a3a48;
+    --active-tint:#15314a; --idle-bg:#1b2229; --idle-line:#2c343c; --case-head:#1d2f40; --case-dt:#9aa8b4; color-scheme:dark; }
 }
-:root[data-theme="dark"] { --ink:#e8edf2; --muted:#93a1ac; --bg:#0f1720; --card:#182634; --line:#2a3a48; color-scheme:dark; }
+:root[data-theme="dark"] { --ink:#e8edf2; --muted:#93a1ac; --bg:#0f1720; --card:#182634; --line:#2a3a48;
+  --active-tint:#15314a; --idle-bg:#1b2229; --idle-line:#2c343c; --case-head:#1d2f40; --case-dt:#9aa8b4; color-scheme:dark; }
 * { box-sizing:border-box; }
 html { scroll-padding-top:env(safe-area-inset-top,0px); height:100%; }
 body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family:'Tajawal','Segoe UI',sans-serif; }
@@ -188,8 +195,8 @@ fieldset legend { font-size:.83rem; font-weight:700; padding:0 8px; color:var(--
 .resp-no { color:var(--coral-bd); font-weight:700; }
 
 /* ورقة القرار الإداري — ورق أبيض بحبر أسود في كل الأوضاع */
-.decision-sheet { display:grid; gap:16px; margin:4px 0 14px; }
-.ds-page { position:relative; overflow:hidden; background:#fff; color:#111; border:1px solid #d6dbe0; border-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.08); padding:28px 32px; font-family:'Amiri','Traditional Arabic','Tajawal',serif; font-size:1.05rem; line-height:2; }
+.decision-sheet { margin:4px 0 12px; }
+.ds-page { position:relative; overflow:hidden; max-width:794px; margin-inline:auto; background:#fff; color:#111; border:1px solid #d6dbe0; border-radius:4px; box-shadow:0 2px 10px rgba(0,0,0,.08); padding:28px 36px; font-family:'Amiri','Traditional Arabic','Tajawal',serif; font-size:1.02rem; line-height:1.95; }
 .ds-watermark { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:3.2rem; font-weight:700; color:rgba(0,71,161,.07); transform:rotate(-24deg); pointer-events:none; white-space:nowrap; }
 .ds-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:6px; }
 .ds-head img { height:48px; }
@@ -197,13 +204,15 @@ fieldset legend { font-size:.83rem; font-weight:700; padding:0 8px; color:var(--
 .ds-title { text-align:center; font-size:1.35rem; font-weight:700; margin:4px 0 10px; color:#111; }
 .ds-line { margin:0; font-weight:700; }
 .ds-decides { text-align:center; font-weight:700; margin:8px 0; }
-.ds-sign { text-align:center; margin:34px 0 18px; font-weight:700; display:grid; gap:14px; justify-items:center; }
+.ds-sign { text-align:center; margin:22px 0 14px; font-weight:700; display:grid; gap:10px; justify-items:center; }
 .ds-copies { font-family:'Tajawal',sans-serif; font-size:.66rem; color:#333; line-height:1.7; }
-.ds-table-wrap { overflow-x:auto; }
-.ds-table { width:100%; min-width:520px; border-collapse:collapse; font-size:.86rem; line-height:1.5; }
-.ds-table th, .ds-table td { border:1.5px solid #333; padding:5px 8px; text-align:center; height:26px; }
+.ds-table-wrap { overflow-x:auto; margin-top:14px; }
+.ds-table { width:100%; min-width:520px; border-collapse:collapse; font-size:.84rem; line-height:1.45; }
+.ds-table th, .ds-table td { border:1.5px solid #333; padding:4px 8px; text-align:center; height:24px; }
 .ds-table th { font-weight:700; background:#f3f5f7; }
-.print-note { font-size:.76rem; color:var(--muted); margin:0 0 12px; }
+.print-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; justify-content:center; margin-bottom:14px; }
+.print-row .btn { margin:0; }
+.print-note { font-size:.76rem; color:var(--amber-tx); background:var(--amber-bg); border:1px solid var(--amber-bd); border-radius:8px; padding:6px 10px; }
 
 @media (max-width:560px) {
   .ds-page { padding:20px 16px; font-size:.95rem; }
@@ -216,8 +225,40 @@ fieldset legend { font-size:.83rem; font-weight:700; padding:0 8px; color:var(--
   body.print-decision > *:not(#printHost) { display:none !important; }
   body.print-decision #printHost { display:block; }
   body.print-decision { background:#fff; }
-  #printHost .decision-sheet { display:block; margin:0; }
-  #printHost .ds-page { border:none; box-shadow:none; border-radius:0; padding:0; page-break-after:always; break-after:page; }
-  #printHost .ds-page:last-child { page-break-after:auto; break-after:auto; }
-  @page { size:A4; margin:20mm; }
+  #printHost .decision-sheet { margin:0; }
+  #printHost .ds-page { max-width:none; border:none; box-shadow:none; border-radius:0; padding:0; font-size:12.5pt; line-height:1.85; }
+  #printHost .ds-table { font-size:10.5pt; min-width:0; }
+  #printHost .ds-table th { background:#f3f5f7 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  @page { size:A4; margin:15mm; }
+}
+
+/* بطاقة الإجراء الحالي: ملوّنة إذا كان للدور الحالي إجراء، ورصاصية بالكامل إن لم يكن */
+.action-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin:-20px -20px 14px; padding:14px 20px; border-radius:13px 13px 0 0; }
+.action-head h2 { margin:0; }
+.action-state { font-size:.76rem; font-weight:700; padding:4px 11px; border-radius:12px; white-space:nowrap; }
+.action-card.is-active { border:2px solid var(--blue-mid); box-shadow:0 6px 22px rgba(1,128,196,.16); }
+.action-card.is-active .action-head { background:linear-gradient(135deg, var(--blue-light), var(--blue-dark)); color:#fff; }
+.action-card.is-active .action-head .action-state { background:var(--gold-light); color:#3a2c00; }
+.action-card.is-idle { background:var(--idle-bg); border-color:var(--idle-line); filter:grayscale(1); }
+.action-card.is-idle .action-head { background:var(--idle-line); color:var(--muted); }
+.action-card.is-idle .action-state { background:var(--idle-bg); color:var(--muted); }
+.action-card.is-idle .waiting { background:transparent; border-color:var(--idle-line); }
+.action-card.is-idle .ds-page { box-shadow:none; }
+
+/* ملف المعاملة */
+.case-list { display:grid; gap:14px; }
+.case-step { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--card); padding:0; margin:0; }
+.case-head { display:flex; align-items:center; gap:12px; padding:11px 14px; background:var(--case-head); border-bottom:1px solid var(--line); }
+.case-num { flex:none; width:28px; height:28px; border-radius:50%; background:var(--blue-dark); color:#fff; display:grid; place-items:center; font-weight:900; font-size:.8rem; font-variant-numeric:tabular-nums; }
+.case-titles { min-width:0; }
+.case-titles h4 { margin:0; font-size:.92rem; font-weight:900; color:var(--ink); }
+.case-titles .who { font-size:.72rem; color:var(--muted); margin-top:2px; }
+.case-kv { margin:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); }
+.case-row { display:grid; grid-template-columns:minmax(120px, 42%) 1fr; gap:10px; padding:9px 14px; border-bottom:1px solid var(--line); min-width:0; }
+.case-row dt { font-size:.76rem; color:var(--case-dt); font-weight:500; }
+.case-row dd { margin:0; font-size:.86rem; font-weight:700; color:var(--ink); overflow-wrap:anywhere; }
+.case-empty { margin:0; padding:10px 14px; font-size:.8rem; color:var(--muted); }
+@media (max-width:560px) {
+  .case-kv { grid-template-columns:1fr; }
+  .case-row { grid-template-columns:1fr; gap:2px; }
 }

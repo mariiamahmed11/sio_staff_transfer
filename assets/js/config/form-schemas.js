@@ -106,11 +106,6 @@ const FORM_SCHEMAS = {
         {key:"targetDept", label:"الإدارة", type:"text", required:true, showIf: d => !isMulti(d)},
         {key:"targetUnit", label:"القسم / الوحدة", type:"text", showIf: d => !isMulti(d)},
         {key:"expectedTasks", label:"المهام المتوقّع أن يقوم بها الموظف بالجهة الجديدة", type:"textarea", required:true}
-      ]},
-      { title:"موافقة الجهات المعنية", showIf: hasCapacity, fields:[
-        {key:"currentDeptApproval", label:"موافقة الجهة الحالية للموظف", type:"radio", options:["موافقة متوفرة","لا توجد بعد"], required:true},
-        {key:"targetDeptApproval", label:"موافقة الجهة المراد النقل إليها", type:"radio", options:["موافقة متوفرة","لا توجد بعد"], required:true},
-        {key:"targetDate", label:"التاريخ المستهدف للانتقال", type:"date"}
       ]}
     ],
     submitLabel:"تقديم الطلب", next:"head_review"
@@ -156,8 +151,13 @@ const FORM_SCHEMAS = {
         {key:"studyRecommendation", label:"توصية مسؤول تخطيط الموارد البشرية (تظهر لمقدم الطلب في حال الرفض)", type:"textarea", required:true}
       ]}
     ],
-    submitLabel:"إنهاء الدراسة والمتابعة",
-    route: d => (!isSelfRequest(d) && d.sendToEmployee === "نعم") ? "employee" : "planner_decision"
+    decisions:[
+      // يُرسل للموظف إن اختير ذلك، وإلا يُرفع مباشرة لتسلسل الموافقات
+      {label:"إرسال الطلب للموافقة", kind:"primary",
+        route: d => (!isSelfRequest(d) && d.sendToEmployee === "نعم") ? "employee" : "appr1"},
+      // الرفض يكفيه كتابة التوصية (سبب الرفض)
+      {label:"رفض الطلب وإشعار مقدم الطلب", next:"rej1", kind:"reject", requiredKeys:["studyRecommendation"]}
+    ]
   },
 
   employee: {
@@ -170,7 +170,7 @@ const FORM_SCHEMAS = {
 
   planner_decision: {
     phase:"gray", actor:ROLE.planner, title:"قرار مسؤول التخطيط",
-    desc:"راجع نتيجة الدراسة ورد الموظف (إن وُجد)، ثم ارفع الطلب لسلسلة الاعتماد أو ارفضه. الرفض يحتاج إلى اعتماد نائب المدير والمدير ومدير الموارد البشرية.",
+    desc:"وصل رد الموظف على طلب النقل. راجعه ثم أرسل الطلب لتسلسل الموافقات أو ارفضه. الرفض يحتاج إلى اعتماد نائب المدير والمدير ومدير الموارد البشرية ثم يُشعَر مقدم الطلب.",
     showEmployeeResponses: true,
     sections:[
       { title:"التوصية", fields:[
@@ -178,8 +178,8 @@ const FORM_SCHEMAS = {
       ]}
     ],
     decisions:[
-      {label:"اعتماد الطلب ورفعه لسلسلة الاعتماد", next:"appr1", kind:"primary"},
-      {label:"رفض الطلب", next:"rej1", kind:"reject"}
+      {label:"إرسال الطلب لتسلسل الموافقات", next:"appr1", kind:"primary"},
+      {label:"رفض الطلب وإشعار مقدم الطلب", next:"rej1", kind:"reject"}
     ]
   },
 

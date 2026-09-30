@@ -53,17 +53,28 @@ function submitDecision(reqId, idx){
   const r = getReq(reqId); const schema = FORM_SCHEMAS[r.currentState];
   if (!canAct(r)) return;
   const decision = schema.decisions[idx];
-  const missing = stepProblems(r, schema);
+  // بعض القرارات (مثل الرفض) تكتفي بحقول محددة بدل النموذج كاملًا
+  const missing = decision.requiredKeys
+    ? decision.requiredKeys.filter(k => !String(r.data[k] ?? "").trim())
+        .map(k => labelOf(schema, k))
+    : stepProblems(r, schema);
   if (missing.length){ errorMsg = "الرجاء إكمال ما يلي: " + missing.join("، "); render(); return; }
   const comment = decision.commentKey ? (r.data[decision.commentKey] || "").trim() : "";
   if (decision.requireComment && !comment){
     errorMsg = "الرجاء كتابة ملاحظة توضّح سبب هذا القرار."; render(); return;
   }
   errorMsg = "";
-  if (decision.next === "rejected"){
+  const next = decision.route ? decision.route(r.data) : decision.next;
+  if (next === "rejected"){
     r.lastReason = decision.reasonFn ? decision.reasonFn(r.data) : `${decision.reason}${comment ? ": " + comment : ""}`;
   }
-  if (decision.next === "returned") r.returnReason = `${decision.reason}: ${comment}`;
-  moveTo(r, schema, decision.next, decision.label);
+  if (next === "returned") r.returnReason = `${decision.reason}: ${comment}`;
+  moveTo(r, schema, next, decision.label);
   render();
+}
+
+function labelOf(schema, key){
+  for (const sec of schema.sections || [])
+    for (const f of sec.fields || []) if (f.key === key) return f.label;
+  return key;
 }

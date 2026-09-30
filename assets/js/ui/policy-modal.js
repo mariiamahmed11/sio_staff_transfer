@@ -1,10 +1,13 @@
 // ============================================================
 // 4) نافذة سياسات النقل
 // ============================================================
-function openPolicyModal(reqId){ modalReqId = reqId; document.getElementById("policyModal").style.display = "flex"; }
+// الضغط على "طلب جديد" يعرض السياسات مباشرة، ولا يُنشأ الطلب إلا بعد الموافقة عليها
+function startNewRequest(){
+  if (selectedRole !== ROLE.applicant) return;
+  document.getElementById("policyModal").style.display = "flex";
+}
 function closeModal(){ document.getElementById("policyModal").style.display = "none"; }
 function agreeToPolicy(){
-  const r = getReq(modalReqId);
-  if (r) r.data.policyAgreed = true;
-  closeModal(); render();
+  closeModal();
+  createRequest();
 }

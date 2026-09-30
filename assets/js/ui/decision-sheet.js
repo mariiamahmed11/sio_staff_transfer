@@ -46,28 +46,27 @@ function renderDecisionSheet(r){
       <p class="ds-line">وبناءً على ما تقتضيه مصلحة العمل،</p>
       <p class="ds-decides">يقرر ما يلي</p>
       ${clauses.map((c, i) => `<p class="ds-line">${ordinals[i]}: ${c}</p>`).join("")}
-      <div class="ds-sign">
-        <div>${esc(DECISION_CONFIG.issuerTitle)}</div>
-        <div class="ds-sign-name">${esc(DECISION_CONFIG.signatory)}</div>
-      </div>
-      <div class="ds-copies">${DECISION_CONFIG.copies.map(c => `<div>${esc(c)}</div>`).join("")}</div>
-    </section>
-    <section class="ds-page ds-annex">
-      <div class="ds-watermark" aria-hidden="true">نسخة تجريبية</div>
       <div class="ds-table-wrap">
         <table class="ds-table">
           <thead><tr><th>م</th><th>الاسم</th><th>رقم الوظيفة</th><th>المسمى الوظيفي</th><th>الإجراء</th><th>الوحدة المنقول لها</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
+      <div class="ds-sign">
+        <div>${esc(DECISION_CONFIG.issuerTitle)}</div>
+        <div class="ds-sign-name">${esc(DECISION_CONFIG.signatory)}</div>
+      </div>
+      <div class="ds-copies">${DECISION_CONFIG.copies.map(c => `<div>${esc(c)}</div>`).join("")}</div>
     </section>
   </div>
-  ${PRINT_SUPPORTED
-    ? `<button class="btn btn-ghost btn-print" onclick="printDecision()">🖨️ طباعة القرار الإداري</button>`
-    : `<p class="print-note">الطباعة متاحة عند تشغيل النظام من ملفاته (index.html)، ولا تعمل في رابط المعاينة.</p>`}`;
+  <div class="print-row">
+    <button class="btn btn-primary btn-print" onclick="printDecision()">🖨️ طباعة القرار الإداري</button>
+    <span class="print-note" id="printNote" hidden>الطباعة تعمل عند تشغيل النظام من ملفاته (index.html)، ولا تعمل داخل رابط المعاينة.</span>
+  </div>`;
 }
 
 function printDecision(){
+  if (!PRINT_SUPPORTED){ const n = document.getElementById("printNote"); if (n) n.hidden = false; return; }
   const sheet = document.getElementById("decisionSheet");
   const host = document.getElementById("printHost");
   if (!sheet || !host) return;
