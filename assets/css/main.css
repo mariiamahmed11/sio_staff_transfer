@@ -26,6 +26,8 @@
 :root[data-theme="dark"] { --ink:#e8edf2; --muted:#93a1ac; --bg:#0f1720; --card:#182634; --line:#2a3a48;
   --active-tint:#15314a; --idle-bg:#1b2229; --idle-line:#2c343c; --case-head:#1d2f40; --case-dt:#9aa8b4; color-scheme:dark; }
 * { box-sizing:border-box; }
+/* اتجاه النص من اليمين لليسار حتى لو فُقدت خاصية dir من وسم html */
+html, body { direction:rtl; }
 html { scroll-padding-top:env(safe-area-inset-top,0px); height:100%; }
 body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family:'Tajawal','Segoe UI',sans-serif; }
 
