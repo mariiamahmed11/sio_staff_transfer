@@ -192,6 +192,16 @@ function renderEmployeeResponses(r){
   }).join("")}</fieldset>`;
 }
 
+// قرار مدير قسم الموظف الحالي/الجديد
+function renderManagerDecisions(r){
+  const entries = Object.entries(r.data.mgrDecisions || {});
+  if (!entries.length) return "";
+  return `<fieldset><legend>قرار مدير القسم</legend>${entries.map(([who, x]) => {
+    const cls = x.decision === "رفض" ? "resp-no" : "resp-yes";
+    return `<div class="kv"><b>${esc(who)}:</b> <span class="${cls}">${esc(x.decision)}</span>${x.comment ? ` — ${esc(x.comment)}` : ""}</div>`;
+  }).join("")}</fieldset>`;
+}
+
 function renderStepExtras(r, st){
   let html = "";
   if (r.currentState === "draft" && r.returnReason)
@@ -200,6 +210,7 @@ function renderStepExtras(r, st){
     html += `<div class="notice amber"><b>سبب الإرجاع:</b> ${esc(r.returnReason)}</div>`;
   if (st.showRecommendation)
     html += `<div class="notice coral"><b>توصية مسؤول التخطيط (سبب الرفض):</b> ${esc(r.data.studyRecommendation || "—")}</div>`;
+  if (st.showManagerDecisions) html += renderManagerDecisions(r);
   if (st.showEmployeeResponses) html += renderEmployeeResponses(r);
   if (st.custom === "employee") html += renderEmployeeStep(r);
   return html;

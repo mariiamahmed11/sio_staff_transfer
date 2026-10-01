@@ -25,8 +25,9 @@ function moveTo(r, schema, next, actionLabel, note){
 
 // عند (إعادة) تقديم الطلب تبدأ الموافقات من جديد
 function resetForResubmission(r){
-  Object.keys(r.data).forEach(k => { if (/^(comment_|rejComment_)/.test(k)) delete r.data[k]; });
+  Object.keys(r.data).forEach(k => { if (/^(comment_|rejComment_|mgrComment_)/.test(k)) delete r.data[k]; });
   delete r.data.employeeResponses;
+  delete r.data.mgrDecisions;
   r.returnReason = "";
 }
 
@@ -66,6 +67,7 @@ function submitDecision(reqId, idx){
     errorMsg = "الرجاء كتابة ملاحظة توضّح سبب هذا القرار."; render(); return;
   }
   errorMsg = "";
+  if (decision.apply) decision.apply(r.data, comment);
   const next = decision.route ? decision.route(r.data) : decision.next;
   if (next === "rejected"){
     r.lastReason = decision.reasonFn ? decision.reasonFn(r.data) : `${decision.reason}${comment ? ": " + comment : ""}`;

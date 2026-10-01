@@ -66,6 +66,36 @@ function rejectionReviewSchema(actorName, nextIfApprove){
   };
 }
 
+// ---------- موافقة مديري الأقسام بعد تقديم الطلب مباشرة ----------
+// طلب الموظف نفسه:            مدير القسم الحالي ← مدير القسم الجديد
+// مدير ينقل موظفًا من قسمه:     مدير القسم الجديد فقط
+// مدير ينقل موظفًا إلى قسمه:    مدير القسم الحالي فقط
+// ثم يُسند رئيس قسم التخطيط الطلب لمسؤول تخطيط يُكمل الدراسة، أو يُشعر مقدم الطلب بالرفض وينهيه.
+const afterSubmit = d =>
+  d.applicantCapacity === CAPACITY.fromMine ? "new_mgr" : "cur_mgr";
+const afterCurrentManager = d =>
+  isSelfRequest(d) ? "new_mgr" : "head_review";
+const deptManagersRejected = d => Object.values(d.mgrDecisions || {}).some(x => x.decision === "رفض");
+
+function deptManagerSchema(actorName, nextIfApprove){
+  const commentKey = "mgrComment_" + actorName;
+  const record = decision => (d, comment) => {
+    d.mgrDecisions = { ...(d.mgrDecisions || {}), [actorName]: { decision, comment } };
+  };
+  return {
+    phase:"teal", actor: actorName,
+    title: "موافقة " + actorName,
+    desc: "راجع نموذج طلب النقل في ملف المعاملة أدناه، ثم وافق على الطلب أو ارفضه. يُرسل قرارك إلى تخطيط الموارد البشرية.",
+    sections: [{ title:"القرار", fields:[
+      {key:commentKey, label:"ملاحظات (إلزامي عند الرفض)", type:"textarea"}
+    ]}],
+    decisions: [
+      {label:"الموافقة على الطلب", kind:"primary", route: nextIfApprove, apply: record("موافقة")},
+      {label:"رفض الطلب", next:"head_review", kind:"reject", requireComment:true, commentKey, apply: record("رفض")}
+    ]
+  };
+}
+
 // رفض الموظف المطلوب نقله: الإجراء الوحيد لمسؤول التخطيط هو إرسال الطلب لتسلسل الموافقات لإعلامهم،
 // وخيارهم الوحيد "قبول الرفض"، وبعد قبول الجميع يُغلق الطلب بالرفض
 const employeeRefused = d => Object.values(d.employeeResponses || {}).some(v => v.startsWith("لا"));
@@ -126,19 +156,37 @@ const FORM_SCHEMAS = {
         {key:"expectedTasks", label:"المهام المتوقّع أن يقوم بها الموظف بالجهة الجديدة", type:"textarea", required:true}
       ]}
     ],
-    submitLabel:"تقديم الطلب", next:"head_review"
+    submitLabel:"تقديم الطلب", route: afterSubmit
   },
+
+  cur_mgr: deptManagerSchema(ROLE.curMgr, afterCurrentManager),
+  new_mgr: deptManagerSchema(ROLE.newMgr, () => "head_review"),
 
   head_review: {
     phase:"gray", actor:ROLE.head, title:"استقبال الطلب وإسناده",
-    desc:"يستقبل رئيس قسم تخطيط الموارد البشرية طلب النقل ويسنده إلى أحد مسؤولي التخطيط. يستطيع المسؤول المكلَّف وحده إكمال إجراءات الطلب، ويطّلع عليه بقية المسؤولين دون اتخاذ أي إجراء.",
+    desc:"يستقبل رئيس قسم تخطيط الموارد البشرية طلب النقل بعد بتّ مدير القسم، ويسنده إلى أحد مسؤولي التخطيط. يستطيع المسؤول المكلَّف وحده إكمال إجراءات الطلب، ويطّلع عليه بقية المسؤولين دون اتخاذ أي إجراء.",
+    showManagerDecisions: true,
     sections:[
       { title:"إسناد الطلب", fields:[
         {key:"assignedPlanner", label:"مسؤول تخطيط الموارد البشرية المكلَّف", type:"select", options:PLANNERS, required:true}
       ]}
     ],
-    submitLabel:"إسناد الطلب", next:"study",
+    submitLabel:"إسناد الطلب",
+    route: d => deptManagersRejected(d) ? "mgr_rejected" : "study",
     historyNote: d => "المسؤول المكلَّف: " + d.assignedPlanner
+  },
+
+  // رفض مدير القسم: يُشعر مسؤول التخطيط مقدم الطلب وينهي الطلب
+  mgr_rejected: {
+    phase:"coral", actor:ROLE.planner, title:"رفض مدير القسم للطلب",
+    desc:"رفض مدير القسم طلب النقل. أشعِر مقدم الطلب بالرفض وأنهِ الطلب.",
+    showManagerDecisions: true,
+    sections:[],
+    decisions:[
+      {label:"إشعار مقدم الطلب وإنهاء الطلب", next:"rejected", kind:"reject",
+        reasonFn: d => Object.entries(d.mgrDecisions || {}).filter(([, x]) => x.decision === "رفض")
+          .map(([who, x]) => `رفض ${who} الطلب: ${x.comment}`).join(" — ")}
+    ]
   },
 
   study: {
