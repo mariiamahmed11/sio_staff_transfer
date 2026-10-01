@@ -10,7 +10,7 @@ let currentView = "home";
 
 // الأدوار التي تصلها طلبات الموافقة. في النظام الفعلي يُعرف الدور من صلاحيات تسجيل الدخول،
 // وفي هذا النموذج يُحاكى تسجيل الدخول باختيار الدور.
-const APPROVER_ROLES = [ROLE.curMgr, ROLE.newMgr, ROLE.employee, ROLE.planMgr, ROLE.hrMgr, ROLE.president];
+const APPROVER_ROLES = [ROLE.curMgr, ROLE.newMgr, ROLE.employee, ROLE.head, ROLE.planMgr, ROLE.hrMgr, ROLE.president];
 let approverRole = APPROVER_ROLES[0];
 
 const VIEW_OF_ROLE = { [ROLE.applicant]:"applicant", [ROLE.head]:"head", [ROLE.planner]:"planner" };
@@ -37,14 +37,26 @@ function selectRole(role){
   errorMsg = "";
   render();
 }
-function selectApprover(i){ selectRole(APPROVER_ROLES[i]); }
+// داخل بوابة طلبات الموافقة يبقى المستخدم فيها حتى لو كان رئيس قسم التخطيط
+function selectApprover(i){
+  approverRole = selectedRole = APPROVER_ROLES[i];
+  currentView = "approvals";
+  selectedRequestId = null;
+  errorMsg = "";
+  render();
+}
 
 // الطلبات التي تظهر في كل بوابة
 function visibleRequests(){
   if (currentView !== "approvals") return requests;
   // طلبات بانتظار قرار صاحب الدور، أو سبق أن بتّ فيها
-  return requests.filter(r => FORM_SCHEMAS[r.currentState].actor === selectedRole
-    || r.history.some(h => h.actor === selectedRole));
+  // رئيس قسم التخطيط يرى هنا خطوات الموافقة فقط (الإسناد في بوابته الخاصة)
+  const isHead = selectedRole === ROLE.head;
+  return requests.filter(r => {
+    const st = FORM_SCHEMAS[r.currentState];
+    return (st.actor === selectedRole && (!isHead || st.approvalStep))
+      || r.history.some(h => h.actor === selectedRole && (!isHead || h.approval));
+  });
 }
 
 const PORTAL_TEXT = {

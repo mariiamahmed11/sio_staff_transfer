@@ -33,7 +33,7 @@ const TABLE_COLUMNS = [
 function approvalSchema(actorName, nextIfApprove, isFinal){
   const commentKey = "comment_" + actorName;
   return {
-    phase:"purple", actor: actorName,
+    phase:"purple", actor: actorName, approvalStep: true,
     title: "اعتماد " + actorName,
     desc: isFinal ? "المستوى الرابع والأخير في سلسلة الاعتماد — القرار هنا نهائي." : "أحد مستويات سلسلة الاعتماد الإداري بالتسلسل.",
     sections: [{ title:"القرار", fields:[
@@ -47,11 +47,11 @@ function approvalSchema(actorName, nextIfApprove, isFinal){
   };
 }
 
-// اعتماد رفض مسؤول التخطيط — يمر على رئيس قسم التخطيط ثم مدير التخطيط ثم مدير الإدارة العامة للموارد البشرية
+// اعتماد رفض مسؤول التخطيط — يمر على تسلسل الموافقات كاملًا
 function rejectionReviewSchema(actorName, nextIfApprove){
   const commentKey = "rejComment_" + actorName;
   return {
-    phase:"coral", actor: actorName,
+    phase:"coral", actor: actorName, approvalStep: true,
     title: "اعتماد رفض الطلب — " + actorName,
     desc: "رفض مسؤول تخطيط الموارد البشرية الطلب، ولا يُغلق الطلب إلا بعد اعتماد الرفض. عند الاعتماد النهائي تظهر التوصية لمقدم الطلب.",
     showRecommendation: true,
@@ -105,15 +105,15 @@ function refusalReason(d){
   const parts = Object.entries(d.mgrDecisions || {}).filter(([, x]) => x.decision === "رفض")
     .map(([who, x]) => `رفض ${who} الطلب: ${x.comment}`);
   if (employeeRefused(d)) parts.push("رفض الموظف المطلوب نقله النقل");
-  return parts.join(" — ") + `. وقُبل الرد من ${ROLE.planMgr} و${ROLE.hrMgr}.`;
+  return parts.join(" — ") + `. وقُبل الرد من تسلسل الموافقات.`;
 }
 
 // رد الرفض (من الموظف أو من مدير القسم الحالي/الجديد) يُرسله مسؤول التخطيط إلى الموافقات،
-// ويصل لمدير تخطيط الموارد البشرية ثم مدير الإدارة العامة للموارد البشرية. لهم خياران فقط: قبول الرد أو الإرجاع للتعديل.
+// ويمر على تسلسل الموافقات كاملًا. لهم خياران فقط: قبول الرد أو الإرجاع للتعديل.
 function acknowledgeSchema(actorName, next){
   const commentKey = "ackComment_" + actorName;
   return {
-    phase:"coral", actor: actorName,
+    phase:"coral", actor: actorName, approvalStep: true,
     title: "رد الرفض — " + actorName,
     desc: "وصل رد بالرفض أرسله مسؤول تخطيط الموارد البشرية. اقبل الرد ليُغلق الطلب ويُشعَر مقدم الطلب، أو أرجع الطلب للتعديل.",
     showManagerDecisions: true,
@@ -254,7 +254,7 @@ const FORM_SCHEMAS = {
     phase:"gray", actor:ROLE.planner, title:"قرار مسؤول التخطيط",
     desc: d => employeeRefused(d)
       ? "رفض الموظف المطلوب نقله النقل. الإجراء المتاح هو إرسال الرد إلى الموافقات."
-      : "وافق الموظف على النقل. راجع رده ثم أرسل الطلب لتسلسل الموافقات أو ارفضه. الرفض يحتاج إلى اعتماد رئيس قسم التخطيط ومدير التخطيط ومدير الإدارة العامة للموارد البشرية ثم يُشعَر مقدم الطلب.",
+      : "وافق الموظف على النقل. راجع رده ثم أرسل الطلب لتسلسل الموافقات أو ارفضه. الرفض يحتاج إلى اعتماد تسلسل الموافقات كاملًا ثم يُشعَر مقدم الطلب.",
     showEmployeeResponses: true,
     sections:[
       { title:"التوصية", showIf: d => !employeeRefused(d), fields:[
@@ -274,12 +274,17 @@ const FORM_SCHEMAS = {
   appr3: approvalSchema(ROLE.hrMgr,     "appr4", false),
   appr4: approvalSchema(ROLE.president, "decision_prep", true),
 
-  rej1: rejectionReviewSchema(ROLE.head,    "rej2"),
-  rej2: rejectionReviewSchema(ROLE.planMgr, "rej3"),
-  rej3: rejectionReviewSchema(ROLE.hrMgr,   "rejected"),
+  // جميع مسارات الموافقة تتبع نفس التسلسل:
+  // رئيس قسم تخطيط الموارد البشرية ← مدير تخطيط الموارد البشرية ← مدير الإدارة العامة للموارد البشرية ← رئيس المؤسسة
+  rej1: rejectionReviewSchema(ROLE.head,      "rej2"),
+  rej2: rejectionReviewSchema(ROLE.planMgr,   "rej3"),
+  rej3: rejectionReviewSchema(ROLE.hrMgr,     "rej4"),
+  rej4: rejectionReviewSchema(ROLE.president, "rejected"),
 
-  ack1: acknowledgeSchema(ROLE.planMgr, "ack2"),
-  ack2: acknowledgeSchema(ROLE.hrMgr,   "rejected"),
+  ack1: acknowledgeSchema(ROLE.head,      "ack2"),
+  ack2: acknowledgeSchema(ROLE.planMgr,   "ack3"),
+  ack3: acknowledgeSchema(ROLE.hrMgr,     "ack4"),
+  ack4: acknowledgeSchema(ROLE.president, "rejected"),
 
   decision_prep: {
     phase:"green", actor:ROLE.planner, title:"إصدار القرار الإداري وإغلاق الطلب",

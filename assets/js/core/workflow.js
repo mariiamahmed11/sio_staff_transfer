@@ -17,7 +17,7 @@ function actorLabel(r, st){
 function moveTo(r, schema, next, actionLabel, note){
   const actor = actorLabel(r, schema);
   if (schema.caseForm) r.completedSteps.push(snapshotSchema(r.currentState, schema, r.data, actor));
-  r.history.push({ actor, action: actionLabel, result: FORM_SCHEMAS[next].title || next, note: note || "",
+  r.history.push({ actor, action: actionLabel, result: FORM_SCHEMAS[next].title || next, note: note || "", approval: !!schema.approvalStep,
     at: new Date().toLocaleString("ar-SA-u-ca-gregory", { dateStyle:"short", timeStyle:"short" }) });
   if (r.currentState === "draft") resetForResubmission(r);
   if (r.currentState === "study") resetAfterStudy(r);

@@ -10,3 +10,6 @@ Thumbs.db
 # Dependencies / logs
 node_modules/
 *.log
+
+# Test screenshots
+/*.png
