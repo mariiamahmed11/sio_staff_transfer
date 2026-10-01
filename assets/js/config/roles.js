@@ -20,7 +20,7 @@ const ROLES = Object.values(ROLE);
 // موظفو قسم تخطيط الموارد البشرية (يُسند إليهم رئيس القسم الطلبات)
 const PLANNERS = [
   "منيرة السويلم", "أنهار المطيري", "عبدالله الناجم",
-  "محمد العرفج", "فهد النجدي"
+  "محمد العرفج", "فهد النجدي", "أحمد الجعفري"
 ];
 
 const PHASE = { teal:"teal", gray:"gray2", amber:"amber", purple:"purple", coral:"coral", green:"green" };
