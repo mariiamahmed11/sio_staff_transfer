@@ -26,7 +26,6 @@ function createRequest(){
   render();
 }
 function selectRequest(id){ selectedRequestId = id; errorMsg = ""; render(); }
-function selectRole(role){ selectedRole = role; errorMsg = ""; render(); }
 function selectPlanner(name){ selectedPlanner = name; errorMsg = ""; render(); }
 function resetAll(){
   requests = []; nextReqId = 1; selectedRequestId = null; errorMsg = "";

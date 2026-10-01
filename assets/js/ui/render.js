@@ -1,20 +1,6 @@
 // ============================================================
 // 7) الرسم
 // ============================================================
-function renderRoleBar(){
-  const bar = document.getElementById("roleBar");
-  bar.innerHTML = ROLES.map((role, i) =>
-    `<button class="role-pill${role === selectedRole ? " active" : ""}" onclick="selectRole(ROLES[${i}])">${esc(role)}</button>`
-  ).join("");
-
-  const sub = document.getElementById("plannerBar");
-  if (selectedRole !== ROLE.planner){ sub.hidden = true; sub.innerHTML = ""; return; }
-  sub.hidden = false;
-  sub.innerHTML = `<span class="sub-label">تتصفح بصفتك:</span>` + PLANNERS.map((p, i) =>
-    `<button class="planner-chip${p === selectedPlanner ? " active" : ""}" onclick="selectPlanner(PLANNERS[${i}])">${esc(p)}</button>`
-  ).join("");
-}
-
 function statusPhraseAndColor(r){
   const st = FORM_SCHEMAS[r.currentState];
   if (st.terminal === "ok") return { text:"تمت", cls:"status-done" };
@@ -46,12 +32,16 @@ function renderRequestsBoard(){
   const newBtn = document.getElementById("newReqBtn");
   newBtn.hidden = selectedRole !== ROLE.applicant;
 
-  if (!requests.length){
-    host.innerHTML = `<div class="empty-board">لا توجد طلبات بعد${selectedRole === ROLE.applicant ? " — ابدأ بزر «طلب جديد»." : " — اختر دور «مقدم الطلب» لإنشاء طلب."}</div>`;
+  const visible = visibleRequests();
+  if (!visible.length){
+    host.innerHTML = `<div class="empty-board">${currentView === "applicant"
+      ? "لا توجد طلبات بعد — ابدأ بزر «طلب جديد»."
+      : currentView === "approvals" ? "لا توجد طلبات موافقة مسندة إلى هذا الدور حاليًا."
+      : "لا توجد طلبات نقل بعد."}</div>`;
     return;
   }
   const term = boardSearch.trim();
-  const sorted = [...requests]
+  const sorted = [...visible]
     .filter(r => !term || getEmployees(r.data).some(e => matchesEmployee(e, term)))
     .sort((a, b) => (canAct(b) ? 1 : 0) - (canAct(a) ? 1 : 0));
   const hidePlanner = selectedRole === ROLE.employee;
@@ -267,7 +257,8 @@ function renderActionCard(r){
 
 function renderWorkspace(){
   const host = document.getElementById("workspace");
-  const r = selectedReq();
+  // يظهر الطلب المختار فقط إذا كان ضمن طلبات البوابة الحالية
+  const r = visibleRequests().includes(selectedReq()) ? selectedReq() : null;
   renderBanner(r);
   if (!r){
     host.innerHTML = `<div class="empty-workspace">اختر طلبًا من اللوحة لعرض تفاصيله.</div>`;
@@ -336,7 +327,11 @@ function renderTimeline(r){
 }
 
 function render(){
-  renderRoleBar();
+  const atHome = currentView === "home" || currentView === "planning-choice";
+  document.getElementById("homeView").hidden = !atHome;
+  document.getElementById("appView").hidden = atHome;
+  if (atHome){ renderHome(); return; }
+  renderPortalBar();
   renderRequestsBoard();
   renderWorkspace();
 }

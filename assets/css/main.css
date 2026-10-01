@@ -43,15 +43,6 @@ header {
 
 .wrap { max-width:1180px; margin:0 auto; padding:20px 16px 70px; }
 
-.role-bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
-.role-pill {
-  border:1.5px solid var(--line); background:var(--card); color:var(--ink);
-  padding:7px 13px; border-radius:18px; font-family:inherit; font-size:.76rem;
-  cursor:pointer; transition:.15s; white-space:nowrap;
-}
-.role-pill:hover { border-color:var(--blue-dark); }
-.role-pill.active { background:var(--blue-dark); color:#fff; border-color:var(--blue-dark); }
-
 .reset-btn {
   background:none; border:1px solid var(--line); color:var(--muted);
   font-family:inherit; font-size:.76rem; padding:7px 13px; border-radius:8px;
@@ -161,8 +152,33 @@ fieldset legend { font-size:.83rem; font-weight:700; padding:0 8px; color:var(--
 .muted { color:var(--muted); }
 
 /* شريط اختيار مسؤول التخطيط */
-.planner-bar { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:-4px 0 14px; padding:10px 12px; background:var(--card); border:1px dashed var(--line); border-radius:10px; }
-.planner-bar .sub-label { font-size:.74rem; color:var(--muted); margin-inline-end:4px; }
+/* الصفحة الرئيسية */
+.home-head { margin:6px 0 18px; }
+.home-head h2 { margin:6px 0 4px; font-size:1.3rem; font-weight:900; text-wrap:balance; }
+.home-head p { margin:0; color:var(--muted); font-size:.88rem; }
+.home-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:16px; }
+.home-grid.two { grid-template-columns:repeat(2, minmax(0, 1fr)); max-width:820px; }
+@media (max-width:820px){ .home-grid, .home-grid.two { grid-template-columns:1fr; } }
+.home-card { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:8px; text-align:start;
+  padding:22px 20px 20px; border-radius:14px; border:1.5px solid var(--line); background:var(--card); color:var(--ink);
+  font-family:inherit; cursor:pointer; transition:transform .15s, border-color .15s, box-shadow .15s; border-top:5px solid var(--blue-mid); }
+.home-card:hover, .home-card:focus-visible { border-color:var(--blue-mid); box-shadow:0 8px 24px rgba(1,128,196,.15); transform:translateY(-2px); outline:none; }
+.home-num { position:absolute; inset-inline-end:16px; top:14px; font-size:1.6rem; font-weight:900; color:var(--gold); line-height:1; }
+.home-icon { font-size:1.7rem; }
+.home-title { font-size:1rem; font-weight:900; line-height:1.5; }
+.home-desc { font-size:.8rem; color:var(--muted); line-height:1.7; }
+.home-foot { margin-top:22px; }
+@media (prefers-reduced-motion: reduce){ .home-card { transition:none; } .home-card:hover { transform:none; } }
+
+/* شريط البوابة */
+.portal-bar { display:grid; gap:10px; margin-bottom:14px; }
+.back-link { justify-self:start; background:none; border:none; padding:4px 0; font-family:inherit; font-size:.84rem; font-weight:700; color:var(--blue-mid); cursor:pointer; }
+.back-link:hover { text-decoration:underline; }
+.portal-who { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:10px 12px; background:var(--card); border:1px dashed var(--line); border-radius:10px; }
+.portal-who:empty { display:none; }
+.sim-label { font-size:.74rem; color:var(--muted); margin-inline-end:4px; }
+.who-chip { font-size:.8rem; font-weight:700; background:var(--teal-bg); color:var(--teal-tx); padding:5px 12px; border-radius:14px; }
+.board-head .sub { margin:2px 0 0; }
 .planner-chip { border:1px solid var(--line); background:var(--bg); color:var(--ink); padding:5px 11px; border-radius:14px; font-family:inherit; font-size:.74rem; cursor:pointer; }
 .planner-chip.active { background:var(--blue-mid); border-color:var(--blue-mid); color:#fff; }
 

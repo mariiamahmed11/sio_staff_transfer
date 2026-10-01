@@ -22,20 +22,24 @@
 </header>
 
 <div class="wrap">
-  <div class="role-bar" id="roleBar"></div>
-  <div class="planner-bar" id="plannerBar" hidden></div>
-  <button class="reset-btn" onclick="resetAll()">↺ إعادة ضبط النظام بالكامل (حذف جميع الطلبات)</button>
+  <!-- الصفحة الرئيسية: اختيار طريقة الدخول -->
+  <main id="homeView"></main>
 
-  <div class="card">
-    <div class="board-head">
-      <div><h2>لوحة الطلبات</h2></div>
-      <button class="btn btn-primary" id="newReqBtn" onclick="startNewRequest()">+ طلب جديد</button>
+  <!-- واجهة النظام بعد الدخول -->
+  <div id="appView" hidden>
+    <div class="portal-bar" id="portalBar"></div>
+
+    <div class="card">
+      <div class="board-head">
+        <div><h2 id="boardTitle">لوحة الطلبات</h2><p class="sub" id="boardSub"></p></div>
+        <button class="btn btn-primary" id="newReqBtn" onclick="startNewRequest()">+ طلب جديد</button>
+      </div>
+      <div id="requestsList"></div>
     </div>
-    <div id="requestsList"></div>
-  </div>
 
-  <div id="bannerHost"></div>
-  <div id="workspace"></div>
+    <div id="bannerHost"></div>
+    <div id="workspace"></div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="policyModal">
@@ -77,6 +81,7 @@
 <script src="assets/js/core/workflow.js"></script>
 <script src="assets/js/ui/policy-modal.js"></script>
 <script src="assets/js/ui/decision-sheet.js"></script>
+<script src="assets/js/ui/portal.js"></script>
 <script src="assets/js/ui/render.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
