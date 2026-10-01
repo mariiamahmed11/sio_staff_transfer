@@ -194,10 +194,8 @@ function renderManagerDecisions(r){
 
 function renderStepExtras(r, st){
   let html = "";
-  if (r.currentState === "draft" && r.returnReason)
-    html += `<div class="notice amber"><b>أُعيد الطلب إليك للتعديل.</b> ${esc(r.returnReason)}</div>`;
   if (st.showReturnReason && r.returnReason)
-    html += `<div class="notice amber"><b>سبب الإرجاع:</b> ${esc(r.returnReason)}</div>`;
+    html += `<div class="notice amber"><b>أُعيد الطلب إليك لتعديل نموذج دراسة الحالة.</b> ${esc(r.returnReason)}</div>`;
   if (st.showRecommendation)
     html += `<div class="notice coral"><b>توصية مسؤول التخطيط (سبب الرفض):</b> ${esc(r.data.studyRecommendation || "—")}</div>`;
   if (st.showManagerDecisions) html += renderManagerDecisions(r);

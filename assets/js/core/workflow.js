@@ -20,8 +20,16 @@ function moveTo(r, schema, next, actionLabel, note){
   r.history.push({ actor, action: actionLabel, result: FORM_SCHEMAS[next].title || next, note: note || "",
     at: new Date().toLocaleString("ar-SA-u-ca-gregory", { dateStyle:"short", timeStyle:"short" }) });
   if (r.currentState === "draft") resetForResubmission(r);
+  if (r.currentState === "study") resetAfterStudy(r);
   r.currentState = next;
   if (FORM_SCHEMAS[next].onEnter) FORM_SCHEMAS[next].onEnter(r);
+}
+
+// بعد (إعادة) إرسال دراسة الحالة تبدأ الموافقات وموافقة الموظف من جديد
+function resetAfterStudy(r){
+  Object.keys(r.data).forEach(k => { if (/^(comment_|rejComment_|ackComment_)/.test(k)) delete r.data[k]; });
+  delete r.data.employeeResponses;
+  r.returnReason = "";
 }
 
 // عند (إعادة) تقديم الطلب تبدأ الموافقات من جديد
@@ -73,7 +81,8 @@ function submitDecision(reqId, idx){
   if (next === "rejected"){
     r.lastReason = decision.reasonFn ? decision.reasonFn(r.data) : `${decision.reason}${comment ? ": " + comment : ""}`;
   }
-  if (next === "returned") r.returnReason = `${decision.reason}: ${comment}`;
+  // الإرجاع للتعديل من أي مستوى اعتماد يعود لمسؤول التخطيط لتعديل نموذج دراسة الحالة، ولا يصل لمقدم الطلب
+  if (decision.kind === "return" && next === "study") r.returnReason = `${decision.reason}: ${comment}`;
   moveTo(r, schema, next, decision.label, decision.noteFn ? decision.noteFn(r.data) : (comment ? "الملاحظات: " + comment : ""));
   render();
 }

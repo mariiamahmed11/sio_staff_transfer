@@ -42,12 +42,12 @@ function approvalSchema(actorName, nextIfApprove, isFinal){
     decisions: [
       {label: isFinal ? "الاعتماد النهائي" : "اعتماد ورفع للمستوى التالي", next:nextIfApprove, kind:"primary"},
       {label:"الرفض", next:"rejected", kind:"reject", reason:`رفض ${actorName} الطلب`, requireComment:true, commentKey},
-      {label:"الإرجاع للتعديل", next:"returned", kind:"return", reason:`أُعيد الطلب للتعديل بقرار ${actorName}`, requireComment:true, commentKey}
+      {label:"الإرجاع للتعديل", next:"study", kind:"return", reason:`أُعيد الطلب للتعديل بقرار ${actorName}`, requireComment:true, commentKey}
     ]
   };
 }
 
-// اعتماد رفض مسؤول التخطيط — يمر على النائب ثم المدير ثم مدير الموارد البشرية
+// اعتماد رفض مسؤول التخطيط — يمر على رئيس قسم التخطيط ثم مدير التخطيط ثم مدير الإدارة العامة للموارد البشرية
 function rejectionReviewSchema(actorName, nextIfApprove){
   const commentKey = "rejComment_" + actorName;
   return {
@@ -61,7 +61,8 @@ function rejectionReviewSchema(actorName, nextIfApprove){
     decisions: [
       {label:"اعتماد الرفض", next:nextIfApprove, kind:"reject",
         reasonFn: d => "التوصية: " + (d.studyRecommendation || "—")},
-      {label:"عدم اعتماد الرفض وإعادته لمسؤول التخطيط", next:"planner_decision", kind:"return", requireComment:true, commentKey}
+      {label:"عدم اعتماد الرفض وإعادته لمسؤول التخطيط", next:"study", kind:"return", requireComment:true, commentKey,
+        reason:`لم يعتمد ${actorName} الرفض وأعاد الطلب للتعديل`}
     ]
   };
 }
@@ -104,11 +105,11 @@ function refusalReason(d){
   const parts = Object.entries(d.mgrDecisions || {}).filter(([, x]) => x.decision === "رفض")
     .map(([who, x]) => `رفض ${who} الطلب: ${x.comment}`);
   if (employeeRefused(d)) parts.push("رفض الموظف المطلوب نقله النقل");
-  return parts.join(" — ") + ". وقُبل الرد من مدير تخطيط الموارد البشرية ومدير الموارد البشرية.";
+  return parts.join(" — ") + `. وقُبل الرد من ${ROLE.planMgr} و${ROLE.hrMgr}.`;
 }
 
 // رد الرفض (من الموظف أو من مدير القسم الحالي/الجديد) يُرسله مسؤول التخطيط إلى الموافقات،
-// ويصل للجميع ما عدا النائب ورئيس المؤسسة. لهم خياران فقط: قبول الرد أو الإرجاع للتعديل.
+// ويصل لمدير تخطيط الموارد البشرية ثم مدير الإدارة العامة للموارد البشرية. لهم خياران فقط: قبول الرد أو الإرجاع للتعديل.
 function acknowledgeSchema(actorName, next){
   const commentKey = "ackComment_" + actorName;
   return {
@@ -122,7 +123,7 @@ function acknowledgeSchema(actorName, next){
     ]}],
     decisions: [
       {label:"قبول الرد", next, kind:"primary", reasonFn: refusalReason},
-      {label:"إرجاع للتعديل", next:"returned", kind:"return", requireComment:true, commentKey,
+      {label:"إرجاع للتعديل", next:"study", kind:"return", requireComment:true, commentKey,
         reason:`أُعيد الطلب للتعديل بقرار ${actorName}`}
     ]
   };
@@ -203,6 +204,7 @@ const FORM_SCHEMAS = {
 
   study: {
     phase:"gray", actor:ROLE.planner, title:"نموذج دراسة حالة الطلب", caseForm:true,
+    showReturnReason: true,
     desc:"دراسة الاحتياج ومطابقة الوظيفة، وتحديد البدلات المفقودة وما إذا كان الطلب سيُرسل للموظف لأخذ موافقته.",
     sections:[
       { title:"بيانات الطلب", fields:[
@@ -252,7 +254,7 @@ const FORM_SCHEMAS = {
     phase:"gray", actor:ROLE.planner, title:"قرار مسؤول التخطيط",
     desc: d => employeeRefused(d)
       ? "رفض الموظف المطلوب نقله النقل. الإجراء المتاح هو إرسال الرد إلى الموافقات."
-      : "وافق الموظف على النقل. راجع رده ثم أرسل الطلب لتسلسل الموافقات أو ارفضه. الرفض يحتاج إلى اعتماد نائب المدير والمدير ومدير الموارد البشرية ثم يُشعَر مقدم الطلب.",
+      : "وافق الموظف على النقل. راجع رده ثم أرسل الطلب لتسلسل الموافقات أو ارفضه. الرفض يحتاج إلى اعتماد رئيس قسم التخطيط ومدير التخطيط ومدير الإدارة العامة للموارد البشرية ثم يُشعَر مقدم الطلب.",
     showEmployeeResponses: true,
     sections:[
       { title:"التوصية", showIf: d => !employeeRefused(d), fields:[
@@ -267,25 +269,17 @@ const FORM_SCHEMAS = {
     ]
   },
 
-  appr1: approvalSchema(ROLE.deputy,    "appr2", false),
+  appr1: approvalSchema(ROLE.head,      "appr2", false),
   appr2: approvalSchema(ROLE.planMgr,   "appr3", false),
   appr3: approvalSchema(ROLE.hrMgr,     "appr4", false),
   appr4: approvalSchema(ROLE.president, "decision_prep", true),
 
-  rej1: rejectionReviewSchema(ROLE.deputy,  "rej2"),
+  rej1: rejectionReviewSchema(ROLE.head,    "rej2"),
   rej2: rejectionReviewSchema(ROLE.planMgr, "rej3"),
   rej3: rejectionReviewSchema(ROLE.hrMgr,   "rejected"),
 
   ack1: acknowledgeSchema(ROLE.planMgr, "ack2"),
   ack2: acknowledgeSchema(ROLE.hrMgr,   "rejected"),
-
-  returned: {
-    phase:"amber", actor:ROLE.planner, title:"طلب مُعاد للتعديل",
-    desc:"أُعيد الطلب من سلسلة الاعتماد. راجع سبب الإرجاع ثم أرسل الطلب لمقدمه ليعدّله ويعيد تقديمه.",
-    showReturnReason: true,
-    sections:[],
-    submitLabel:"إرسال الطلب لمقدم الطلب للتعديل", next:"draft"
-  },
 
   decision_prep: {
     phase:"green", actor:ROLE.planner, title:"إصدار القرار الإداري وإغلاق الطلب",
