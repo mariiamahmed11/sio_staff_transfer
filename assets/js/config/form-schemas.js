@@ -35,7 +35,7 @@ function approvalSchema(actorName, nextIfApprove, isFinal){
   return {
     phase:"purple", actor: actorName, approvalStep: true,
     title: "اعتماد " + actorName,
-    desc: isFinal ? "المستوى الرابع والأخير في سلسلة الاعتماد — القرار هنا نهائي." : "أحد مستويات سلسلة الاعتماد الإداري بالتسلسل.",
+    desc: isFinal ? "المستوى الأخير في سلسلة الاعتماد — القرار هنا نهائي." : "أحد مستويات سلسلة الاعتماد الإداري بالتسلسل.",
     sections: [{ title:"القرار", fields:[
       {key:commentKey, label:"ملاحظات (إلزامي عند الرفض أو الإرجاع)", type:"textarea"}
     ]}],
@@ -127,6 +127,16 @@ function acknowledgeSchema(actorName, next){
         reason:`أُعيد الطلب للتعديل بقرار ${actorName}`}
     ]
   };
+}
+
+// يبني خطوات مسار موافقة متتالية: prefix1 ← prefix2 ← … ← finalNext
+function buildChain(prefix, makeStep, finalNext){
+  const steps = {};
+  APPROVAL_SEQUENCE.forEach((actor, i) => {
+    const isLast = i === APPROVAL_SEQUENCE.length - 1;
+    steps[prefix + (i + 1)] = makeStep(actor, isLast ? finalNext : prefix + (i + 2), isLast);
+  });
+  return steps;
 }
 
 const FORM_SCHEMAS = {
@@ -269,22 +279,11 @@ const FORM_SCHEMAS = {
     ]
   },
 
-  appr1: approvalSchema(ROLE.head,      "appr2", false),
-  appr2: approvalSchema(ROLE.planMgr,   "appr3", false),
-  appr3: approvalSchema(ROLE.hrMgr,     "appr4", false),
-  appr4: approvalSchema(ROLE.president, "decision_prep", true),
-
-  // جميع مسارات الموافقة تتبع نفس التسلسل:
-  // رئيس قسم تخطيط الموارد البشرية ← مدير تخطيط الموارد البشرية ← مدير الإدارة العامة للموارد البشرية ← رئيس المؤسسة
-  rej1: rejectionReviewSchema(ROLE.head,      "rej2"),
-  rej2: rejectionReviewSchema(ROLE.planMgr,   "rej3"),
-  rej3: rejectionReviewSchema(ROLE.hrMgr,     "rej4"),
-  rej4: rejectionReviewSchema(ROLE.president, "rejected"),
-
-  ack1: acknowledgeSchema(ROLE.head,      "ack2"),
-  ack2: acknowledgeSchema(ROLE.planMgr,   "ack3"),
-  ack3: acknowledgeSchema(ROLE.hrMgr,     "ack4"),
-  ack4: acknowledgeSchema(ROLE.president, "rejected"),
+  // مسارات الموافقة الثلاثة تُبنى من APPROVAL_SEQUENCE (انظر roles.js):
+  // appr1… اعتماد الطلب، rej1… اعتماد رفض مسؤول التخطيط، ack1… قبول رد الرفض
+  ...buildChain("appr", (actor, next, isLast) => approvalSchema(actor, next, isLast), "decision_prep"),
+  ...buildChain("rej",  (actor, next) => rejectionReviewSchema(actor, next), "rejected"),
+  ...buildChain("ack",  (actor, next) => acknowledgeSchema(actor, next), "rejected"),
 
   decision_prep: {
     phase:"green", actor:ROLE.planner, title:"إصدار القرار الإداري وإغلاق الطلب",

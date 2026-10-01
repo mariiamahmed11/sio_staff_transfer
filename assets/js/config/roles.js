@@ -10,6 +10,7 @@ const ROLE = {
   planner:   "مسؤول تخطيط الموارد البشرية",
   employee:  "الموظف المطلوب نقله",
   planMgr:   "مدير تخطيط الموارد البشرية",
+  devMgr:    "مدير إدارة تطوير الموارد البشرية",
   hrMgr:     "مدير الإدارة العامة للموارد البشرية",
   president: "رئيس المؤسسة"
 };
@@ -22,5 +23,8 @@ const PLANNERS = [
   "منيرة السويلم", "أنهار المطيري", "عبدالله الناجم",
   "محمد العرفج", "فهد النجدي", "أحمد الجعفري"
 ];
+
+// تسلسل الموافقات — تتبعه جميع مسارات الموافقة (اعتماد الطلب، اعتماد الرفض، قبول رد الرفض)
+const APPROVAL_SEQUENCE = [ROLE.head, ROLE.planMgr, ROLE.devMgr, ROLE.hrMgr, ROLE.president];
 
 const PHASE = { teal:"teal", gray:"gray2", amber:"amber", purple:"purple", coral:"coral", green:"green" };

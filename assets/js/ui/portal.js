@@ -10,7 +10,7 @@ let currentView = "home";
 
 // الأدوار التي تصلها طلبات الموافقة. في النظام الفعلي يُعرف الدور من صلاحيات تسجيل الدخول،
 // وفي هذا النموذج يُحاكى تسجيل الدخول باختيار الدور.
-const APPROVER_ROLES = [ROLE.curMgr, ROLE.newMgr, ROLE.employee, ROLE.head, ROLE.planMgr, ROLE.hrMgr, ROLE.president];
+const APPROVER_ROLES = [ROLE.curMgr, ROLE.newMgr, ROLE.employee, ...APPROVAL_SEQUENCE];
 let approverRole = APPROVER_ROLES[0];
 
 const VIEW_OF_ROLE = { [ROLE.applicant]:"applicant", [ROLE.head]:"head", [ROLE.planner]:"planner" };
