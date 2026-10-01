@@ -51,7 +51,7 @@ function renderRequestsBoard(){
   const rows = sorted.length ? sorted.map(r => {
     const { text, cls } = statusPhraseAndColor(r);
     const planner = hidePlanner ? "—" : (r.data.assignedPlanner ? esc(r.data.assignedPlanner) : `<span class="muted">لم يُسند بعد</span>`);
-    return `<tr class="${cls} ${r.id === selectedRequestId ? "selected" : ""}" onclick="selectRequest(${r.id})">
+    return `<tr class="${cls} ${r.id === selectedRequestId ? "selected" : ""}" onclick="toggleRequest(${r.id})">
       <td class="rq-num-cell">#${r.id}</td>
       <td>${esc(employeesSummary(r.data)) || '<span class="muted">—</span>'}</td>
       <td>${planner}</td>
@@ -261,7 +261,7 @@ function renderWorkspace(){
   const r = visibleRequests().includes(selectedReq()) ? selectedReq() : null;
   renderBanner(r);
   if (!r){
-    host.innerHTML = `<div class="empty-workspace">اختر طلبًا من اللوحة لعرض تفاصيله.</div>`;
+    host.innerHTML = `<div class="empty-workspace">اضغط على أي طلب في الجدول لعرض تفاصيله.</div>`;
     return;
   }
   const st = FORM_SCHEMAS[r.currentState];
@@ -318,12 +318,23 @@ function renderCaseFile(r){
     <div class="case-list">${body}</div></div>`;
 }
 
+// سجل الإجراءات: الإجراءات المكتملة بتفاصيلها، ثم الإجراء التالي بعنوان رصاصي ودائرة رصاصية
 function renderTimeline(r){
-  const items = r.history.length ? r.history.map(h => `
-    <li><div class="tl-state">${esc(h.action)}</div><div class="tl-meta">بواسطة: ${esc(h.actor)} — التالي: ${esc(h.result)}</div>
-    ${h.note ? `<div class="tl-note">${esc(h.note)}</div>` : ""}</li>
-  `).join("") : `<li class="tl-meta">لم يبدأ أي إجراء بعد.</li>`;
-  return `<div class="card"><h2>سجل الإجراءات</h2><ul class="timeline">${items}</ul></div>`;
+  const done = r.history.map(h => `
+    <li class="tl-done">
+      <div class="tl-state">${esc(h.action)}</div>
+      <div class="tl-meta">بواسطة: ${esc(h.actor)}${h.at ? ` · ${esc(h.at)}` : ""}</div>
+      ${h.note ? `<div class="tl-note">${esc(h.note)}</div>` : ""}
+    </li>`).join("");
+
+  const st = FORM_SCHEMAS[r.currentState];
+  const next = st.terminal
+    ? `<li class="tl-end ${st.terminal === "ok" ? "is-ok" : "is-bad"}"><div class="tl-state">${esc(st.title)}</div></li>`
+    : `<li class="tl-next">
+        <div class="tl-state">${esc(st.title)}</div>
+        <div class="tl-meta">الإجراء التالي — بانتظار: ${esc(actorLabel(r, st))}</div>
+      </li>`;
+  return `<div class="card"><h2>سجل الإجراءات</h2><ul class="timeline">${done}${next}</ul></div>`;
 }
 
 function render(){

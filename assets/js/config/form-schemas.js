@@ -99,17 +99,31 @@ function deptManagerSchema(actorName, nextIfApprove){
 // رفض الموظف المطلوب نقله: الإجراء الوحيد لمسؤول التخطيط هو إرسال الطلب لتسلسل الموافقات لإعلامهم،
 // وخيارهم الوحيد "قبول الرفض"، وبعد قبول الجميع يُغلق الطلب بالرفض
 const employeeRefused = d => Object.values(d.employeeResponses || {}).some(v => v.startsWith("لا"));
-const REFUSAL_REASON = "رفض الموظف المطلوب نقله النقل، وقبلت جميع مستويات الاعتماد رفضه.";
+// سبب الإغلاق: رفض مدير القسم و/أو رفض الموظف، بعد قبول الرد في الموافقات
+function refusalReason(d){
+  const parts = Object.entries(d.mgrDecisions || {}).filter(([, x]) => x.decision === "رفض")
+    .map(([who, x]) => `رفض ${who} الطلب: ${x.comment}`);
+  if (employeeRefused(d)) parts.push("رفض الموظف المطلوب نقله النقل");
+  return parts.join(" — ") + ". وقُبل الرد من مدير تخطيط الموارد البشرية ومدير الموارد البشرية.";
+}
 
+// رد الرفض (من الموظف أو من مدير القسم الحالي/الجديد) يُرسله مسؤول التخطيط إلى الموافقات،
+// ويصل للجميع ما عدا النائب ورئيس المؤسسة. لهم خياران فقط: قبول الرد أو الإرجاع للتعديل.
 function acknowledgeSchema(actorName, next){
+  const commentKey = "ackComment_" + actorName;
   return {
     phase:"coral", actor: actorName,
-    title: "العلم برفض الموظف — " + actorName,
-    desc: "رفض الموظف المطلوب نقله النقل، وأرسل مسؤول التخطيط الطلب لإعلامك. الخيار المتاح هو قبول الرفض، وبعد قبول جميع المستويات يُغلق الطلب بالرفض.",
+    title: "رد الرفض — " + actorName,
+    desc: "وصل رد بالرفض أرسله مسؤول تخطيط الموارد البشرية. اقبل الرد ليُغلق الطلب ويُشعَر مقدم الطلب، أو أرجع الطلب للتعديل.",
+    showManagerDecisions: true,
     showEmployeeResponses: true,
-    sections: [],
+    sections: [{ title:"القرار", fields:[
+      {key:commentKey, label:"ملاحظات (إلزامي عند الإرجاع للتعديل)", type:"textarea"}
+    ]}],
     decisions: [
-      {label:"قبول الرفض", next, kind:"primary", reasonFn: () => REFUSAL_REASON}
+      {label:"قبول الرد", next, kind:"primary", reasonFn: refusalReason},
+      {label:"إرجاع للتعديل", next:"returned", kind:"return", requireComment:true, commentKey,
+        reason:`أُعيد الطلب للتعديل بقرار ${actorName}`}
     ]
   };
 }
@@ -178,14 +192,12 @@ const FORM_SCHEMAS = {
 
   // رفض مدير القسم: يُشعر مسؤول التخطيط مقدم الطلب وينهي الطلب
   mgr_rejected: {
-    phase:"coral", actor:ROLE.planner, title:"رفض مدير القسم للطلب",
-    desc:"رفض مدير القسم طلب النقل. أشعِر مقدم الطلب بالرفض وأنهِ الطلب.",
+    phase:"coral", actor:ROLE.planner, title:"رد مدير القسم بالرفض",
+    desc:"رفض مدير القسم طلب النقل. الإجراء المتاح هو إرسال الرد إلى الموافقات.",
     showManagerDecisions: true,
     sections:[],
     decisions:[
-      {label:"إشعار مقدم الطلب وإنهاء الطلب", next:"rejected", kind:"reject",
-        reasonFn: d => Object.entries(d.mgrDecisions || {}).filter(([, x]) => x.decision === "رفض")
-          .map(([who, x]) => `رفض ${who} الطلب: ${x.comment}`).join(" — ")}
+      {label:"إرسال الرد إلى الموافقات", next:"ack1", kind:"primary"}
     ]
   },
 
@@ -239,7 +251,7 @@ const FORM_SCHEMAS = {
   planner_decision: {
     phase:"gray", actor:ROLE.planner, title:"قرار مسؤول التخطيط",
     desc: d => employeeRefused(d)
-      ? "رفض الموظف المطلوب نقله النقل. الإجراء المتاح لك هو إرسال الطلب لتسلسل الموافقات لإعلامهم برفضه."
+      ? "رفض الموظف المطلوب نقله النقل. الإجراء المتاح هو إرسال الرد إلى الموافقات."
       : "وافق الموظف على النقل. راجع رده ثم أرسل الطلب لتسلسل الموافقات أو ارفضه. الرفض يحتاج إلى اعتماد نائب المدير والمدير ومدير الموارد البشرية ثم يُشعَر مقدم الطلب.",
     showEmployeeResponses: true,
     sections:[
@@ -251,7 +263,7 @@ const FORM_SCHEMAS = {
       {label:"إرسال الطلب لتسلسل الموافقات", next:"appr1", kind:"primary", showIf: d => !employeeRefused(d)},
       {label:"رفض الطلب وإشعار مقدم الطلب", next:"rej1", kind:"reject", showIf: d => !employeeRefused(d),
         noteFn: d => "التوصية: " + d.studyRecommendation},
-      {label:"إرسال الطلب للموافقات لإعلامهم", next:"ack1", kind:"primary", showIf: employeeRefused}
+      {label:"إرسال الرد إلى الموافقات", next:"ack1", kind:"primary", showIf: employeeRefused}
     ]
   },
 
@@ -264,10 +276,8 @@ const FORM_SCHEMAS = {
   rej2: rejectionReviewSchema(ROLE.planMgr, "rej3"),
   rej3: rejectionReviewSchema(ROLE.hrMgr,   "rejected"),
 
-  ack1: acknowledgeSchema(ROLE.deputy,    "ack2"),
-  ack2: acknowledgeSchema(ROLE.planMgr,   "ack3"),
-  ack3: acknowledgeSchema(ROLE.hrMgr,     "ack4"),
-  ack4: acknowledgeSchema(ROLE.president, "rejected"),
+  ack1: acknowledgeSchema(ROLE.planMgr, "ack2"),
+  ack2: acknowledgeSchema(ROLE.hrMgr,   "rejected"),
 
   returned: {
     phase:"amber", actor:ROLE.planner, title:"طلب مُعاد للتعديل",

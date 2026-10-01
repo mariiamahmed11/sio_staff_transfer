@@ -129,12 +129,17 @@ fieldset legend { font-size:.83rem; font-weight:700; padding:0 8px; color:var(--
 .kv b { color:var(--muted); font-weight:500; }
 .empty-case { font-size:.8rem; color:var(--muted); }
 
+/* سجل الإجراءات: الخط والدوائر على يمين القائمة */
 .timeline { list-style:none; margin:0; padding:0; }
-.timeline li { position:relative; padding-inline-end:20px; padding-bottom:14px; border-inline-end:2px solid var(--line); margin-inline-end:8px; }
+.timeline li { position:relative; padding-inline-start:24px; padding-bottom:18px; border-inline-start:2px solid var(--line); margin-inline-start:7px; }
 .timeline li:last-child { border-color:transparent; padding-bottom:0; }
-.timeline li::before { content:''; position:absolute; inset-inline-end:-6px; top:2px; width:10px; height:10px; border-radius:50%; background:var(--blue-dark); }
-.tl-state { font-size:.8rem; font-weight:700; }
-.tl-meta { font-size:.68rem; color:var(--muted); margin-top:2px; }
+.timeline li::before { content:''; position:absolute; inset-inline-start:-8px; top:1px; width:14px; height:14px; border-radius:50%; background:var(--blue-dark); box-shadow:0 0 0 3px var(--card); }
+.tl-state { font-size:.86rem; font-weight:900; color:var(--ink); line-height:1.5; }
+.tl-meta { font-size:.72rem; color:var(--muted); margin-top:3px; }
+.timeline li.tl-next::before { background:var(--gray2-bd); }
+.timeline li.tl-next .tl-state { color:var(--gray2-bd); }
+.timeline li.tl-end.is-ok::before { background:var(--green-bd); }
+.timeline li.tl-end.is-bad::before { background:var(--coral-bd); }
 
 /* Modal */
 .modal-overlay { position:fixed; inset:0; background:rgba(10,20,30,.55); display:none; align-items:center; justify-content:center; z-index:80; padding:20px; }

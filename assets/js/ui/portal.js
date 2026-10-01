@@ -17,6 +17,7 @@ const VIEW_OF_ROLE = { [ROLE.applicant]:"applicant", [ROLE.head]:"head", [ROLE.p
 
 function openView(view){
   currentView = view;
+  selectedRequestId = null;
   errorMsg = "";
   if (view === "applicant") selectedRole = ROLE.applicant;
   if (view === "head")      selectedRole = ROLE.head;
@@ -32,6 +33,7 @@ function selectRole(role){
   if (APPROVER_ROLES.includes(role)) approverRole = role;
   selectedRole = role;
   currentView = VIEW_OF_ROLE[role] || "approvals";
+  selectedRequestId = null;
   errorMsg = "";
   render();
 }

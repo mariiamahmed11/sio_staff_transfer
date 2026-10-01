@@ -25,8 +25,10 @@ function createRequest(){
   errorMsg = "";
   render();
 }
+// تفاصيل الطلب لا تظهر إلا عند الضغط على صفه في الجدول، والضغط مرة أخرى يخفيها
 function selectRequest(id){ selectedRequestId = id; errorMsg = ""; render(); }
-function selectPlanner(name){ selectedPlanner = name; errorMsg = ""; render(); }
+function toggleRequest(id){ selectRequest(selectedRequestId === id ? null : id); }
+function selectPlanner(name){ selectedPlanner = name; selectedRequestId = null; errorMsg = ""; render(); }
 function resetAll(){
   requests = []; nextReqId = 1; selectedRequestId = null; errorMsg = "";
   render();
